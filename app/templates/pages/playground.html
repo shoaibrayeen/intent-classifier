@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Playground · Intent Classifier{% endblock %}
+{% block content %}
+<h1>Playground</h1>
+<p class="muted">Classify a query against one domain and inspect every stage of the retrieval pipeline.</p>
+
+<section class="card">
+  <form hx-post="/ui/playground/classify" hx-target="#classify-result" hx-swap="innerHTML">
+    <label>Domain
+      <select name="domain" required>
+        {% for domain in domains %}
+        <option value="{{ domain.id }}" {% if selected == domain.id %}selected{% endif %}>
+          {{ domain.name }} ({{ domain.example_count }} examples)
+        </option>
+        {% else %}
+        <option disabled>No domains yet</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Query
+      <textarea name="text" rows="3" required placeholder="Show me all contracts with Microsoft expiring this year"></textarea>
+    </label>
+    <button type="submit">Classify</button>
+  </form>
+</section>
+
+<div id="classify-result"></div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ domain.name }} · Intent Classifier{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/">Domains</a> / <span>{{ domain.name }}</span></nav>
+
+<h1>{{ domain.name }}</h1>
+<p class="muted">{{ domain.description or "No description." }}</p>
+<p>
+  <span class="badge">{{ domain.intent_count }} intents</span>
+  <span class="badge">{{ domain.example_count }} examples</span>
+  <span class="badge {{ 'ok' if domain.status == 'active' else 'warn' }}">{{ domain.status }}</span>
+  <a class="button-link" href="/ui/playground?domain={{ domain.id }}">Open in playground</a>
+</p>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Intents</h2>
+    <div id="index-status">{% include "partials/index_status.html" %}</div>
+  </div>
+  <table>
+    <thead><tr><th>Intent</th><th>Description</th><th>Tool</th><th class="num">Examples</th><th></th></tr></thead>
+    <tbody id="intent-list">
+      {% include "partials/intent_list.html" %}
+    </tbody>
+  </table>
+  <button hx-post="/ui/domains/{{ domain.id }}/reindex" hx-target="#index-status" hx-swap="innerHTML">Rebuild index</button>
+</section>
+
+<section class="card">
+  <h2>Create intent</h2>
+  <form hx-post="/ui/domains/{{ domain.id }}/intents" hx-target="#intent-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
+    <label>Name<input name="name" required placeholder="CONTRACT_SEARCH" maxlength="120"></label>
+    <label>Description<input name="description" placeholder="Search contracts based on user criteria" maxlength="2000"></label>
+    <div class="row">
+      <label>Tool name<input name="tool_name" placeholder="search_contracts"></label>
+      <label>Tool version<input name="tool_version" value="v1"></label>
+    </div>
+    <label>Entity schema (JSON)
+      <textarea name="entity_schema" rows="5" placeholder='{"counterparty": {"type": "string"}}'></textarea>
+    </label>
+    <button type="submit">Create intent</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,284 @@
+"""Server-rendered management UI.
+
+Every mutation calls the same service objects as the JSON API and returns the
+affected list partial plus an out-of-band flash message, so htmx can swap both
+in one response.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse
+
+from app.dependencies import (
+    get_container,
+    get_domain_service,
+    get_example_service,
+    get_index_manager,
+    get_intent_service,
+)
+from app.errors import InvalidInputError
+from app.models.classification import ClassifyRequest
+from app.models.domain import DomainCreate
+from app.models.example import ExampleCreate
+from app.models.intent import IntentCreate, ToolRef
+from app.services.container import Container
+from app.services.domain_service import DomainService
+from app.services.example_service import ExampleService
+from app.services.index_manager import IndexManager
+from app.services.intent_service import IntentService
+from app.ui.templating import templates
+
+router = APIRouter(tags=["ui"], include_in_schema=False)
+
+
+def _flash(message: str, level: str = "success") -> str:
+    return f'<div id="flash" class="flash {level}" hx-swap-oob="true">{message}</div>'
+
+
+def _partial(request: Request, name: str, context: dict, flash: str | None = None) -> HTMLResponse:
+    response = templates.TemplateResponse(request=request, name=name, context=context)
+    if flash:
+        body = response.body.decode() + flash
+        return HTMLResponse(body)
+    return response
+
+
+# --------------------------------------------------------------------- pages
+@router.get("/", response_class=HTMLResponse)
+def dashboard(request: Request, domains: DomainService = Depends(get_domain_service)):
+    return templates.TemplateResponse(
+        request=request, name="pages/dashboard.html", context={"domains": domains.list()}
+    )
+
+
+@router.get("/ui/domains/{domain_id}", response_class=HTMLResponse)
+def domain_page(
+    request: Request,
+    domain_id: str,
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+    indexes: IndexManager = Depends(get_index_manager),
+):
+    domain = domains.read(domain_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/domain.html",
+        context={
+            "domain": domain,
+            "intents": intents.list(domain_id),
+            "status": indexes.status(domain_id),
+        },
+    )
+
+
+@router.get("/ui/domains/{domain_id}/intents/{intent_id}", response_class=HTMLResponse)
+def intent_page(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+    examples: ExampleService = Depends(get_example_service),
+    indexes: IndexManager = Depends(get_index_manager),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/intent.html",
+        context={
+            "domain": domains.get(domain_id),
+            "intent": intents.read(domain_id, intent_id),
+            "examples": examples.list(domain_id, intent_id),
+            "status": indexes.status(domain_id),
+        },
+    )
+
+
+@router.get("/ui/playground", response_class=HTMLResponse)
+def playground(
+    request: Request,
+    domain: str | None = None,
+    domains: DomainService = Depends(get_domain_service),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/playground.html",
+        context={"domains": domains.list(), "selected": domain},
+    )
+
+
+# ----------------------------------------------------------------- mutations
+@router.post("/ui/domains", response_class=HTMLResponse)
+def ui_create_domain(
+    request: Request,
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()] = "",
+    domains: DomainService = Depends(get_domain_service),
+):
+    domains.create(DomainCreate(name=name, description=description))
+    return _partial(
+        request,
+        "partials/domain_list.html",
+        {"domains": domains.list()},
+        _flash(f"Domain '{name}' created."),
+    )
+
+
+@router.delete("/ui/domains/{domain_id}", response_class=HTMLResponse)
+def ui_delete_domain(
+    request: Request, domain_id: str, domains: DomainService = Depends(get_domain_service)
+):
+    domain = domains.get(domain_id)
+    domains.delete(domain_id)
+    return _partial(
+        request,
+        "partials/domain_list.html",
+        {"domains": domains.list()},
+        _flash(f"Domain '{domain.name}' deleted."),
+    )
+
+
+@router.post("/ui/domains/{domain_id}/intents", response_class=HTMLResponse)
+def ui_create_intent(
+    request: Request,
+    domain_id: str,
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()] = "",
+    tool_name: Annotated[str, Form()] = "",
+    tool_version: Annotated[str, Form()] = "v1",
+    entity_schema: Annotated[str, Form()] = "",
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+):
+    domains.get(domain_id)
+    intents.create(
+        domain_id,
+        IntentCreate(
+            name=name,
+            description=description,
+            tool=ToolRef(name=tool_name, version=tool_version or "v1"),
+            entity_schema=_parse_schema(entity_schema),
+        ),
+    )
+    return _partial(
+        request,
+        "partials/intent_list.html",
+        {"domain": domains.read(domain_id), "intents": intents.list(domain_id)},
+        _flash(f"Intent '{name}' created."),
+    )
+
+
+@router.delete("/ui/domains/{domain_id}/intents/{intent_id}", response_class=HTMLResponse)
+def ui_delete_intent(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+):
+    intent = intents.get(domain_id, intent_id)
+    intents.delete(domain_id, intent_id)
+    return _partial(
+        request,
+        "partials/intent_list.html",
+        {"domain": domains.read(domain_id), "intents": intents.list(domain_id)},
+        _flash(f"Intent '{intent.name}' deleted."),
+    )
+
+
+@router.post("/ui/domains/{domain_id}/intents/{intent_id}/examples", response_class=HTMLResponse)
+def ui_add_example(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    text: Annotated[str, Form()],
+    domains: DomainService = Depends(get_domain_service),
+    examples: ExampleService = Depends(get_example_service),
+):
+    domains.get(domain_id)
+    examples.add(domain_id, intent_id, ExampleCreate(text=text))
+    return _partial(
+        request,
+        "partials/example_list.html",
+        {
+            "domain_id": domain_id,
+            "intent_id": intent_id,
+            "examples": examples.list(domain_id, intent_id),
+        },
+        _flash("Example added and index rebuilt."),
+    )
+
+
+@router.delete(
+    "/ui/domains/{domain_id}/intents/{intent_id}/examples/{example_id}",
+    response_class=HTMLResponse,
+)
+def ui_delete_example(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    example_id: str,
+    examples: ExampleService = Depends(get_example_service),
+):
+    examples.delete(domain_id, intent_id, example_id)
+    return _partial(
+        request,
+        "partials/example_list.html",
+        {
+            "domain_id": domain_id,
+            "intent_id": intent_id,
+            "examples": examples.list(domain_id, intent_id),
+        },
+        _flash("Example deleted and index rebuilt."),
+    )
+
+
+@router.post("/ui/domains/{domain_id}/reindex", response_class=HTMLResponse)
+def ui_reindex(
+    request: Request,
+    domain_id: str,
+    domains: DomainService = Depends(get_domain_service),
+    indexes: IndexManager = Depends(get_index_manager),
+):
+    domains.get(domain_id)
+    indexes.rebuild(domain_id)
+    return _partial(
+        request,
+        "partials/index_status.html",
+        {"status": indexes.status(domain_id)},
+        _flash("Index rebuilt."),
+    )
+
+
+@router.post("/ui/playground/classify", response_class=HTMLResponse)
+def ui_classify(
+    request: Request,
+    domain: Annotated[str, Form()],
+    text: Annotated[str, Form()],
+    container: Container = Depends(get_container),
+    domains: DomainService = Depends(get_domain_service),
+):
+    payload = ClassifyRequest(domain=domain, text=text)
+    resolved = domains.resolve(payload.domain)
+    result = container.classifier.classify(resolved, payload.text, debug=True)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/classify_result.html",
+        context={"result": result, "settings": container.settings},
+    )
+
+
+def _parse_schema(raw: str) -> dict:
+    raw = (raw or "").strip()
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise InvalidInputError(f"entity schema is not valid JSON: {exc.msg}") from exc
+    if not isinstance(parsed, dict):
+        raise InvalidInputError("entity schema must be a JSON object")
+    return parsed

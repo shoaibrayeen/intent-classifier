@@ -1,0 +1,14 @@
+# runtime data: chroma store, embedding model cache, bm25 artifacts
+data/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/

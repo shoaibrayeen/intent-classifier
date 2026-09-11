@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Intent Classifier{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Intent Classifier</a>
+    <nav>
+      <a href="/">Domains</a>
+      <a href="/ui/playground">Playground</a>
+      <a href="/docs">API</a>
+    </nav>
+  </header>
+
+  <div id="flash" class="flash"></div>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    Hybrid retrieval: FastEmbed dense + BM25 sparse, fused with Reciprocal Rank Fusion.
+  </footer>
+</body>
+</html>

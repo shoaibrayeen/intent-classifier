@@ -1,0 +1,15 @@
+{% for domain in domains %}
+<tr>
+  <td><a href="/ui/domains/{{ domain.id }}">{{ domain.name }}</a></td>
+  <td class="muted">{{ domain.description or "—" }}</td>
+  <td class="num">{{ domain.intent_count }}</td>
+  <td class="num">{{ domain.example_count }}</td>
+  <td class="right">
+    <button class="danger" hx-delete="/ui/domains/{{ domain.id }}"
+            hx-target="#domain-list" hx-swap="innerHTML"
+            hx-confirm="Delete '{{ domain.name }}' with all its intents and examples?">Delete</button>
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="5" class="muted">No domains yet. Create one below.</td></tr>
+{% endfor %}

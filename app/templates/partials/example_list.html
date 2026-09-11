@@ -1,0 +1,11 @@
+{% for example in examples %}
+<li>
+  <span>{{ example.text }}</span>
+  <button class="danger small"
+          hx-delete="/ui/domains/{{ domain_id }}/intents/{{ intent_id }}/examples/{{ example.id }}"
+          hx-target="#example-list" hx-swap="innerHTML"
+          hx-confirm="Delete this example?">Delete</button>
+</li>
+{% else %}
+<li class="muted">No examples yet. Retrieval needs at least one.</li>
+{% endfor %}

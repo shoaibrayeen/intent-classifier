@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intent Classifier — Architecture</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf9f7; --panel: #fff; --ink: #1a1917; --muted: #6b6a66;
+    --line: #e3e1dc; --accent: #2f6f4f; --accent-soft: #e8f1eb;
+    --sparse: #7a5c2e; --sparse-soft: #f4ecdd; --danger: #9c2f2f;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a; --panel: #1e2023; --ink: #eceae6; --muted: #9b9a95;
+      --line: #32343a; --accent: #6fbf94; --accent-soft: #223029;
+      --sparse: #d4ac6a; --sparse-soft: #2e2820; --danger: #e0806f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2.5rem; }
+  h1 { font-size: 2rem; margin: 0 0 .4rem; letter-spacing: -.025em; }
+  h2 {
+    font-size: 1.25rem; margin: 3rem 0 .75rem; letter-spacing: -.015em;
+    padding-top: 1.5rem; border-top: 1px solid var(--line);
+  }
+  h3 { font-size: 1rem; margin: 2rem 0 .5rem; letter-spacing: -.01em; }
+  p { margin: .85rem 0; }
+  .lede { font-size: 1.1rem; color: var(--muted); margin: 0; }
+  .muted { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  code { background: var(--accent-soft); padding: .1em .35em; border-radius: 4px; }
+  pre {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-family: var(--mono);
+    font-size: 13px; line-height: 1.5; margin: 1rem 0;
+  }
+  pre code { background: none; padding: 0; }
+  figure { margin: 1.75rem 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--muted); font-size: .85rem; margin-top: .6rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 1.25rem 0; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: .85rem 1.1rem; border-radius: 0 8px 8px 0; margin: 1.5rem 0;
+  }
+  .note strong { display: block; margin-bottom: .2rem; }
+  .scroll { overflow-x: auto; }
+  ul { padding-left: 1.25rem; }
+  li { margin: .35rem 0; }
+  .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: .5rem; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 3px; margin-right: .4rem; vertical-align: baseline;
+  }
+  .legend .dense::before { background: var(--accent); }
+  .legend .sparse::before { background: var(--sparse); }
+  .legend .store::before { background: var(--muted); }
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .box { fill: var(--panel); stroke: var(--line); }
+  .box-dense { fill: var(--accent-soft); stroke: var(--accent); }
+  .box-sparse { fill: var(--sparse-soft); stroke: var(--sparse); }
+  .t { fill: var(--ink); font-size: 13px; }
+  .t-sm { fill: var(--muted); font-size: 11px; }
+  .t-hd { fill: var(--ink); font-size: 13px; font-weight: 600; }
+  .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Intent Classifier</h1>
+  <p class="lede">A domain-aware engine that maps free-form language to configured business
+  intents using hybrid retrieval, and declines to answer when nothing fits.</p>
+</header>
+
+<p>The premise is that intent classification is a <strong>retrieval</strong> problem, not a
+generation problem. Each intent owns a set of example utterances. A query is matched against
+that corpus by two independent retrievers, their rankings are fused, and the winning intent is
+scored. Every stage is inspectable, and adding an intent means adding examples rather than
+training a model.</p>
+
+<h2>System layers</h2>
+
+<figure>
+<svg viewBox="0 0 760 420" role="img" aria-label="Layered architecture from UI and API through the engine to storage">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="20" y="16" width="330" height="70" rx="9"/>
+  <text class="t-hd" x="38" y="42">Management UI</text>
+  <text class="t-sm" x="38" y="62">Jinja2 + htmx · domains, intents, examples</text>
+  <text class="t-sm" x="38" y="77">playground with full retrieval trace</text>
+
+  <rect class="box" x="410" y="16" width="330" height="70" rx="9"/>
+  <text class="t-hd" x="428" y="42">API clients</text>
+  <text class="t-sm" x="428" y="62">applications, agents, other services</text>
+  <text class="t-sm" x="428" y="77">POST /api/v1/classify</text>
+
+  <g color="var(--muted)">
+    <path class="arrow" d="M185,86 L185,116" marker-end="url(#a)"/>
+    <path class="arrow" d="M575,86 L575,116" marker-end="url(#a)"/>
+  </g>
+
+  <rect class="box" x="20" y="118" width="720" height="56" rx="9"/>
+  <text class="t-hd" x="38" y="142">FastAPI</text>
+  <text class="t-sm" x="38" y="161">/classify · /classify/debug · /domains · /intents · /examples · /reindex · /health</text>
+
+  <g color="var(--muted)"><path class="arrow" d="M380,174 L380,202" marker-end="url(#a)"/></g>
+
+  <rect class="box" x="20" y="204" width="720" height="104" rx="9"/>
+  <text class="t-hd" x="38" y="228">Classification engine</text>
+  <rect class="box-dense" x="38" y="240" width="150" height="50" rx="7"/>
+  <text class="t" x="52" y="262">dense retrieval</text>
+  <text class="t-sm" x="52" y="279">FastEmbed vectors</text>
+  <rect class="box-sparse" x="200" y="240" width="150" height="50" rx="7"/>
+  <text class="t" x="214" y="262">sparse retrieval</text>
+  <text class="t-sm" x="214" y="279">BM25 term overlap</text>
+  <rect class="box" x="362" y="240" width="130" height="50" rx="7"/>
+  <text class="t" x="376" y="262">fusion</text>
+  <text class="t-sm" x="376" y="279">RRF, then grouping</text>
+  <rect class="box" x="504" y="240" width="218" height="50" rx="7"/>
+  <text class="t" x="518" y="262">confidence and decision</text>
+  <text class="t-sm" x="518" y="279">intent, or UNKNOWN with a reason</text>
+
+  <g color="var(--muted)">
+    <path class="arrow" d="M120,308 L120,344" marker-end="url(#a)"/>
+    <path class="arrow" d="M280,308 L280,344" marker-end="url(#a)"/>
+  </g>
+
+  <rect class="box" x="20" y="346" width="330" height="58" rx="9"/>
+  <text class="t-hd" x="38" y="370">ChromaDB — system of record</text>
+  <text class="t-sm" x="38" y="390">domains · intents · intent_examples + embeddings</text>
+
+  <rect class="box" x="410" y="346" width="330" height="58" rx="9"/>
+  <text class="t-hd" x="428" y="370">BM25 index — derived state</text>
+  <text class="t-sm" x="428" y="390">in memory per domain, rebuilt on every change</text>
+</svg>
+<figcaption>The UI and the API share one service layer, so anything the UI can do is also an API
+call. The engine has no side effects: it reads, scores and returns.</figcaption>
+</figure>
+
+<h2>How a query is classified</h2>
+
+<figure>
+<svg viewBox="0 0 760 560" role="img" aria-label="Classification pipeline from query to intent or UNKNOWN">
+  <defs>
+    <marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </marker>
+  </defs>
+  <g color="var(--muted)">
+
+  <rect class="box" x="255" y="14" width="250" height="46" rx="9"/>
+  <text class="t-hd" x="275" y="38">query</text>
+  <text class="t-sm" x="275" y="53">"Show me Microsoft contracts expiring this year"</text>
+
+  <path class="arrow" d="M380,60 L380,84" marker-end="url(#b)"/>
+
+  <rect class="box" x="255" y="86" width="250" height="44" rx="9"/>
+  <text class="t" x="275" y="108">normalize</text>
+  <text class="t-sm" x="275" y="123">NFKC · casefold · collapse whitespace</text>
+
+  <path class="arrow" d="M380,130 L380,146 L175,146 L175,172" marker-end="url(#b)"/>
+  <path class="arrow" d="M380,130 L380,146 L585,146 L585,172" marker-end="url(#b)"/>
+
+  <rect class="box-dense" x="40" y="174" width="270" height="96" rx="9"/>
+  <text class="t-hd" x="58" y="197">dense retrieval</text>
+  <text class="t-sm" x="58" y="216">embed the query with FastEmbed,</text>
+  <text class="t-sm" x="58" y="231">cosine search over ChromaDB</text>
+  <text class="t-sm" x="58" y="252">catches paraphrase:</text>
+  <text class="t-sm" x="58" y="265">"agreements" matches "contracts"</text>
+
+  <rect class="box-sparse" x="450" y="174" width="270" height="96" rx="9"/>
+  <text class="t-hd" x="468" y="197">sparse retrieval</text>
+  <text class="t-sm" x="468" y="216">tokenize, score with BM25</text>
+  <text class="t-sm" x="468" y="231">over the domain's corpus</text>
+  <text class="t-sm" x="468" y="252">catches exact terms a vector blurs:</text>
+  <text class="t-sm" x="468" y="265">ids, names, rare words</text>
+
+  <path class="arrow" d="M175,270 L175,296 L380,296 L380,318" marker-end="url(#b)"/>
+  <path class="arrow" d="M585,270 L585,296 L380,296" />
+
+  <rect class="box" x="205" y="320" width="350" height="58" rx="9"/>
+  <text class="t-hd" x="225" y="343">Reciprocal Rank Fusion</text>
+  <text class="t-sm" x="225" y="362">each list contributes 1 / (60 + rank) per example</text>
+
+  <path class="arrow" d="M380,378 L380,400" marker-end="url(#b)"/>
+
+  <rect class="box" x="205" y="402" width="350" height="58" rx="9"/>
+  <text class="t-hd" x="225" y="425">group by intent</text>
+  <text class="t-sm" x="225" y="444">sum each intent's three best examples</text>
+
+  <path class="arrow" d="M380,460 L380,482" marker-end="url(#b)"/>
+
+  <rect class="box" x="205" y="484" width="350" height="60" rx="9"/>
+  <text class="t-hd" x="225" y="507">confidence and decision</text>
+  <text class="t-sm" x="225" y="526">above both thresholds → the intent</text>
+  <text class="t-sm" x="225" y="539">below either → UNKNOWN, with the reason</text>
+
+  </g>
+</svg>
+<figcaption>Retrieval returns <em>examples</em>; the product classifies <em>intents</em>. The
+grouping step is where one becomes the other.</figcaption>
+</figure>
+
+<div class="legend">
+  <span class="dense">dense / semantic</span>
+  <span class="sparse">sparse / lexical</span>
+  <span class="store">shared stages</span>
+</div>
+
+<h3>Why fuse by rank</h3>
+<p>Cosine similarity and BM25 scores live on incomparable scales: one is bounded near
+[0, 1], the other is unbounded and grows with corpus statistics. Averaging them is not
+meaningful. Reciprocal Rank Fusion discards the magnitudes and keeps the ordering, so an
+example that both retrievers place near the top outranks one that either places first alone.</p>
+
+<h3>Why sum the best three examples per intent</h3>
+<table>
+  <thead><tr><th>Strategy</th><th>Failure mode</th></tr></thead>
+  <tbody>
+    <tr><td>take the single best example</td><td>one near-duplicate decides everything; the runner-up margin becomes noise</td></tr>
+    <tr><td>sum every retrieved example</td><td>intents with more examples accumulate low-rank crumbs and win on size</td></tr>
+    <tr><td><strong>sum the best three</strong></td><td>rewards agreement among strong examples, caps the advantage of a large intent</td></tr>
+  </tbody>
+</table>
+<p>It also gives the score a known ceiling — an intent whose examples take ranks 1 to 3 in both
+lists — which is what makes the fusion score normalizable into a bounded signal.</p>
+
+<h2>Confidence</h2>
+
+<p>The fused score is a ranking quantity, not a probability. Returning it as confidence would
+be misleading, so confidence is computed separately from four bounded signals.</p>
+
+<table>
+  <thead><tr><th>Signal</th><th>Weight</th><th>What it measures</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">s_dense</td><td>0.35</td><td>cosine similarity of the closest example, rescaled between a floor and ceiling</td></tr>
+    <tr><td class="mono">s_rrf</td><td>0.25</td><td>the aggregated fusion score against its theoretical maximum</td></tr>
+    <tr><td class="mono">s_margin</td><td>0.25</td><td>how far the winner leads the runner-up</td></tr>
+    <tr><td class="mono">s_support</td><td>0.15</td><td>how many retrieved examples back the winner</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>BM25's raw score is excluded on purpose.</strong>
+  It depends on corpus size and document length, so a score of 5.9 means different things in
+  different domains. Its evidence already reaches the decision through the fusion ranking.
+</div>
+
+<h3>The UNKNOWN rule</h3>
+<p>A result is <code>UNKNOWN</code> when confidence falls below the threshold, or when the
+closest example is below a hard similarity floor regardless of how well the lexical retriever
+scored. The response names which rule fired: <code>low_confidence</code>,
+<code>low_similarity</code> or <code>no_examples</code>.</p>
+<p>This matters most for agentic callers. A confident wrong classification invokes the wrong
+tool, which is worse than admitting the request is out of scope.</p>
+
+<h2>Domains</h2>
+
+<p>A domain is an isolated intent namespace, and retrieval never crosses the boundary. The same
+phrase can mean different things in different domains, and a catalogue with hundreds of intents
+does not dilute a small one.</p>
+
+<pre><code>contract                     employee
+├── CONTRACT_SEARCH          ├── EMPLOYEE_SEARCH
+├── CONTRACT_SUMMARY         ├── EMPLOYEE_DETAILS
+├── CONTRACT_EXPIRY          └── EMPLOYEE_LEAVE
+└── CONTRACT_COMPARE</code></pre>
+
+<p>"How many leave days do I have left?" is a valid request in one namespace and correctly
+<code>UNKNOWN</code> in the other.</p>
+
+<h2>Data model</h2>
+
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="Three Chroma collections and the derived BM25 index">
+  <rect class="box" x="20" y="20" width="220" height="94" rx="9"/>
+  <text class="t-hd" x="38" y="44">domains</text>
+  <text class="t-sm" x="38" y="64">id · name · description</text>
+  <text class="t-sm" x="38" y="80">status · timestamps</text>
+  <text class="t-sm" x="38" y="100">document = JSON config</text>
+
+  <rect class="box" x="270" y="20" width="220" height="94" rx="9"/>
+  <text class="t-hd" x="288" y="44">intents</text>
+  <text class="t-sm" x="288" y="64">domain_id · name · description</text>
+  <text class="t-sm" x="288" y="80">tool mapping · entity schema</text>
+  <text class="t-sm" x="288" y="100">document = JSON config</text>
+
+  <rect class="box-dense" x="520" y="20" width="220" height="94" rx="9"/>
+  <text class="t-hd" x="538" y="44">intent_examples</text>
+  <text class="t-sm" x="538" y="64">domain_id · intent_id · text</text>
+  <text class="t-sm" x="538" y="80">384-dim embedding, cosine</text>
+  <text class="t-sm" x="538" y="100">the retrieval corpus</text>
+
+  <g color="var(--muted)">
+    <path class="arrow" d="M240,67 L268,67" marker-end="url(#a)"/>
+    <path class="arrow" d="M490,67 L518,67" marker-end="url(#a)"/>
+    <path class="arrow" d="M630,114 L630,150" marker-end="url(#a)"/>
+  </g>
+
+  <rect class="box-sparse" x="520" y="152" width="220" height="74" rx="9"/>
+  <text class="t-hd" x="538" y="176">BM25 index</text>
+  <text class="t-sm" x="538" y="196">derived, in memory, per domain</text>
+  <text class="t-sm" x="538" y="212">rebuilt whenever examples change</text>
+
+  <rect class="box" x="20" y="152" width="470" height="74" rx="9"/>
+  <text class="t-hd" x="38" y="176">Service layer enforces what Chroma cannot</text>
+  <text class="t-sm" x="38" y="196">unique names · cascading deletes · index invalidation</text>
+  <text class="t-sm" x="38" y="212">one client, one lock: embedded Chroma is single-writer</text>
+</svg>
+<figcaption>Chroma is the system of record for configuration and vectors. The BM25 index is
+derived state and is never treated as a source of truth.</figcaption>
+</figure>
+
+<p>Chroma has no uniqueness constraints, no foreign keys and no cascades, and an insert with an
+existing id is silently skipped rather than rejected. Every one of those guarantees is therefore
+enforced in the service layer under a single lock. Repositories sit behind protocols, so
+configuration can move to a relational store later without touching the engine.</p>
+
+<h2>Keeping the indexes honest</h2>
+
+<p>Two indexes must agree: the vectors in Chroma and the BM25 corpus in memory. They are updated
+in the same operation. Adding an example embeds it, writes it, and rebuilds that domain's BM25
+index before the request returns, so the new phrasing is classifiable immediately.</p>
+
+<p>Rebuilding eagerly is affordable because the corpora are small — hundreds of short
+utterances — and it keeps the reported state truthful. <code>GET
+/domains/{id}/index/status</code> reports the state, a version number that increments on every
+rebuild, and both document counts; if they disagree, something is wrong.</p>
+
+<div class="note">
+  <strong>One tokenizer, used twice.</strong>
+  The same function normalizes text when the index is built and when a query arrives. A mismatch
+  between the two is the classic cause of a BM25 retriever that silently finds nothing.
+</div>
+
+<h2>Request and response</h2>
+
+<pre><code>POST /api/v1/classify
+{
+  "domain": "contract",
+  "text": "Show me all contracts with Microsoft expiring this year"
+}</code></pre>
+
+<pre><code>{
+  "domain": "contract",
+  "intent": "CONTRACT_SEARCH",
+  "confidence": 0.71,
+  "entities": {},
+  "tool": { "name": "search_contracts", "version": "v1" },
+  "reason": null,
+  "top_intents": [
+    { "intent": "CONTRACT_SEARCH", "score": 0.0941, "supporting_examples": 4, "best_similarity": 0.862 },
+    { "intent": "CONTRACT_EXPIRY", "score": 0.0924, "supporting_examples": 6, "best_similarity": 0.908 }
+  ]
+}</code></pre>
+
+<p><code>POST /api/v1/classify/debug</code> returns the same decision with the full trace
+attached: the normalized query and its tokens, every dense hit with its similarity, every BM25
+hit with its score, the fused intent ranking, and the four confidence signals. The playground
+renders exactly that, which makes a surprising classification a five-second investigation rather
+than a guess.</p>
+
+<h2>Deliberate boundaries</h2>
+
+<table>
+  <thead><tr><th>Decision</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Classification is separate from tool execution</td>
+      <td>A result reports the mapped tool; the caller decides whether to run it. A
+      side-effect-free classifier can be shared by an API, a UI and an agent.</td>
+    </tr>
+    <tr>
+      <td>The LLM is not in the classification path</td>
+      <td>Retrieval is deterministic, inspectable and evaluable. The LLM is reserved for entity
+      extraction, where generation is actually the right tool.</td>
+    </tr>
+    <tr>
+      <td>The BM25 index is never persisted as truth</td>
+      <td>Rebuilding from Chroma is fast, and a second on-disk copy drifts the moment the
+      tokenizer changes.</td>
+    </tr>
+    <tr>
+      <td>One process, one worker</td>
+      <td>Embedded Chroma is a single-writer store. Concurrent writers risk corrupting it.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Evaluation</h2>
+
+<p>A held-out set of 42 queries — none of them training examples, 10 of them deliberately
+out of scope — is scored on every run. Accuracy is a regression test, not a launch metric.</p>
+
+<table>
+  <thead><tr><th>Metric</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Top-1 accuracy</td><td>90.6%</td></tr>
+    <tr><td>Top-3 accuracy</td><td>100%</td></tr>
+    <tr><td>UNKNOWN detection</td><td>90%</td></tr>
+    <tr><td>Valid queries wrongly refused</td><td>3.1%</td></tr>
+  </tbody>
+</table>
+
+<p>Top-3 at 100% with top-1 at 90.6% says something specific: retrieval is finding the right
+intent every time, and the remaining errors are ranking decisions between close neighbours. That
+points at the aggregation and confidence stages, not at the retrievers.</p>
+
+<p>The thresholds were chosen by sweeping them against this set rather than by taste. The sweep
+prints the trade-off directly: a stricter similarity floor reaches perfect UNKNOWN detection
+but starts refusing valid queries. Which side to err on depends on whether a wrong tool call
+costs more than a refusal.</p>
+
+<h2>What comes next</h2>
+<ul>
+  <li><strong>Entity extraction.</strong> Intents already carry an entity schema and the LLM
+  client is wired. Turning it on fills the <code>entities</code> field.</li>
+  <li><strong>Tool routing.</strong> A separate layer that takes a classification plus entities
+  and invokes the mapped tool with validated arguments.</li>
+  <li><strong>Production hardening.</strong> Authentication, per-domain authorization, audit
+  logs, latency metrics, and feedback capture to recalibrate thresholds on real traffic.</li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+{% set debug = result.debug %}
+<section class="card">
+  <h2>Result</h2>
+  <div class="result-head">
+    <div>
+      <div class="label">Intent</div>
+      <div class="result-intent {{ 'unknown' if result.intent == 'UNKNOWN' else '' }}">{{ result.intent }}</div>
+      {% if result.reason %}<div class="muted small">reason: {{ result.reason }}</div>{% endif %}
+    </div>
+    <div>
+      <div class="label">Confidence</div>
+      <div class="result-confidence">{{ result.confidence | pct }}</div>
+      <div class="confidence-bar"><span style="width: {{ (result.confidence * 100) | round(0) }}%"></span></div>
+      <div class="muted small">threshold {{ settings.confidence_threshold | pct }}</div>
+    </div>
+    <div>
+      <div class="label">Tool</div>
+      <div class="mono">{{ result.tool.name if result.tool else "—" }}</div>
+    </div>
+  </div>
+</section>
+
+{% if debug %}
+<section class="card">
+  <h2>Confidence breakdown</h2>
+  {% set breakdown = debug.confidence_breakdown %}
+  <table>
+    <thead><tr><th>Signal</th><th class="num">Value</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>s_dense</td><td class="num">{{ breakdown.s_dense | num(3) }}</td><td class="muted">best cosine similarity, rescaled</td></tr>
+      <tr><td>s_rrf</td><td class="num">{{ breakdown.s_rrf | num(3) }}</td><td class="muted">aggregated fusion score against its ceiling</td></tr>
+      <tr><td>s_margin</td><td class="num">{{ breakdown.s_margin | num(3) }}</td><td class="muted">lead over the runner-up intent</td></tr>
+      <tr><td>s_support</td><td class="num">{{ breakdown.s_support | num(3) }}</td><td class="muted">number of examples backing the top intent</td></tr>
+      <tr><td>best similarity</td><td class="num">{{ breakdown.best_similarity | num(3) }}</td><td class="muted">floor for UNKNOWN is {{ settings.min_dense_similarity }}</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Ranked intents after fusion</h2>
+  <table>
+    <thead><tr><th>#</th><th>Intent</th><th class="num">Score</th><th class="num">Supporting examples</th><th class="num">Best similarity</th></tr></thead>
+    <tbody>
+      {% for item in debug.rrf_intents %}
+      <tr><td class="num">{{ loop.index }}</td><td>{{ item.intent }}</td><td class="num">{{ item.score | num(5) }}</td>
+          <td class="num">{{ item.supporting_examples }}</td><td class="num">{{ item.best_similarity | num(3) }}</td></tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Nothing retrieved.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Dense retrieval</h2>
+    <p class="muted small">FastEmbed vector search over Chroma. Query: <span class="mono">{{ debug.normalized_text }}</span></p>
+    <table>
+      <thead><tr><th>#</th><th>Example</th><th>Intent</th><th class="num">Similarity</th></tr></thead>
+      <tbody>
+        {% for hit in debug.dense_hits %}
+        <tr><td class="num">{{ hit.rank }}</td><td>{{ hit.text }}</td><td class="mono small">{{ hit.intent_name }}</td>
+            <td class="num">{{ hit.similarity | num(3) }}</td></tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No dense hits.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>BM25 retrieval</h2>
+    <p class="muted small">Tokens: <span class="mono">{{ debug.tokens | join(" · ") }}</span> · index v{{ debug.index_version }}</p>
+    <table>
+      <thead><tr><th>#</th><th>Example</th><th>Intent</th><th class="num">Score</th></tr></thead>
+      <tbody>
+        {% for hit in debug.bm25_hits %}
+        <tr><td class="num">{{ hit.rank }}</td><td>{{ hit.text }}</td><td class="mono small">{{ hit.intent_name }}</td>
+            <td class="num">{{ hit.score | num(3) }}</td></tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No lexical overlap with any example.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endif %}

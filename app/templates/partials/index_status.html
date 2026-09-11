@@ -1,0 +1,4 @@
+<span class="badge {{ 'ok' if status.state == 'ready' else 'warn' }}">index: {{ status.state }}</span>
+<span class="badge">v{{ status.version }}</span>
+<span class="badge">{{ status.bm25_doc_count }} BM25 docs</span>
+<span class="badge">{{ status.dense_count }} vectors</span>

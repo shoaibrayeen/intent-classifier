@@ -1,0 +1,15 @@
+{% for intent in intents %}
+<tr>
+  <td><a href="/ui/domains/{{ domain.id }}/intents/{{ intent.id }}">{{ intent.name }}</a></td>
+  <td class="muted">{{ intent.description or "—" }}</td>
+  <td class="mono">{{ intent.tool.name or "—" }}</td>
+  <td class="num">{{ intent.example_count }}</td>
+  <td class="right">
+    <button class="danger" hx-delete="/ui/domains/{{ domain.id }}/intents/{{ intent.id }}"
+            hx-target="#intent-list" hx-swap="innerHTML"
+            hx-confirm="Delete '{{ intent.name }}' and its examples?">Delete</button>
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="5" class="muted">No intents yet. Create one below.</td></tr>
+{% endfor %}

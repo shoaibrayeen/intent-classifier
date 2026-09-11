@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ intent.name }} · Intent Classifier{% endblock %}
+{% block content %}
+<nav class="crumbs">
+  <a href="/">Domains</a> / <a href="/ui/domains/{{ domain.id }}">{{ domain.name }}</a> / <span>{{ intent.name }}</span>
+</nav>
+
+<h1>{{ intent.name }}</h1>
+<p class="muted">{{ intent.description or "No description." }}</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Tool mapping</h2>
+    <p class="mono">{{ intent.tool.name or "not mapped" }} <span class="muted">{{ intent.tool.version }}</span></p>
+    <p class="muted small">Routing and invocation are handled by the caller. This service only reports the mapping.</p>
+  </section>
+  <section class="card">
+    <h2>Entity schema</h2>
+    <pre class="mono">{{ intent.entity_schema | json_pretty }}</pre>
+    <p class="muted small">Extraction runs only when entity extraction is enabled.</p>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Training examples <span class="badge">{{ intent.example_count }}</span></h2>
+    <div id="index-status">{% include "partials/index_status.html" %}</div>
+  </div>
+  <ul id="example-list" class="examples">
+    {% with domain_id = domain.id, intent_id = intent.id %}
+      {% include "partials/example_list.html" %}
+    {% endwith %}
+  </ul>
+
+  <form hx-post="/ui/domains/{{ domain.id }}/intents/{{ intent.id }}/examples"
+        hx-target="#example-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
+    <label>Add example<input name="text" required placeholder="Find all contracts with Microsoft" maxlength="2000"></label>
+    <button type="submit">Add example</button>
+  </form>
+  <button hx-post="/ui/domains/{{ domain.id }}/reindex" hx-target="#index-status" hx-swap="innerHTML">Rebuild index</button>
+</section>
+{% endblock %}

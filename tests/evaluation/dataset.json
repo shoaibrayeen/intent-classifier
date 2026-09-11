@@ -1,0 +1,54 @@
+{
+  "description": "Held-out queries for the seeded catalogue. None of these are training examples. 'UNKNOWN' marks queries that must not be forced into any intent.",
+  "cases": [
+    {"domain": "contract", "query": "Which agreements are we running with Acme?", "expected": "CONTRACT_SEARCH"},
+    {"domain": "contract", "query": "Pull up every contract signed with Oracle", "expected": "CONTRACT_SEARCH"},
+    {"domain": "contract", "query": "I need a list of our vendor agreements", "expected": "CONTRACT_SEARCH"},
+    {"domain": "contract", "query": "Show all contracts that are currently live", "expected": "CONTRACT_SEARCH"},
+    {"domain": "contract", "query": "Do we have anything on file with Salesforce?", "expected": "CONTRACT_SEARCH"},
+    {"domain": "contract", "query": "Find agreements involving Deloitte", "expected": "CONTRACT_SEARCH"},
+
+    {"domain": "contract", "query": "Give me the gist of the Oracle agreement", "expected": "CONTRACT_SUMMARY"},
+    {"domain": "contract", "query": "What are the main points of contract C-1042?", "expected": "CONTRACT_SUMMARY"},
+    {"domain": "contract", "query": "Walk me through the key terms of the Acme deal", "expected": "CONTRACT_SUMMARY"},
+    {"domain": "contract", "query": "Summarise this agreement for me", "expected": "CONTRACT_SUMMARY"},
+    {"domain": "contract", "query": "What obligations does the Microsoft MSA put on us?", "expected": "CONTRACT_SUMMARY"},
+
+    {"domain": "contract", "query": "What agreements come up for renewal soon?", "expected": "CONTRACT_EXPIRY"},
+    {"domain": "contract", "query": "Anything terminating before the end of the quarter?", "expected": "CONTRACT_EXPIRY"},
+    {"domain": "contract", "query": "List contracts whose end date falls in 2026", "expected": "CONTRACT_EXPIRY"},
+    {"domain": "contract", "query": "When is the Oracle contract due to end?", "expected": "CONTRACT_EXPIRY"},
+    {"domain": "contract", "query": "Show me everything expiring in the next two months", "expected": "CONTRACT_EXPIRY"},
+
+    {"domain": "contract", "query": "Show the differences between the Acme and Oracle deals", "expected": "CONTRACT_COMPARE"},
+    {"domain": "contract", "query": "How do these two agreements differ on indemnity?", "expected": "CONTRACT_COMPARE"},
+    {"domain": "contract", "query": "Put contract C-1042 side by side with C-1099", "expected": "CONTRACT_COMPARE"},
+    {"domain": "contract", "query": "Contrast the payment terms of both vendors", "expected": "CONTRACT_COMPARE"},
+
+    {"domain": "employee", "query": "Who are the developers based in Pune?", "expected": "EMPLOYEE_SEARCH"},
+    {"domain": "employee", "query": "List everyone working in marketing", "expected": "EMPLOYEE_SEARCH"},
+    {"domain": "employee", "query": "Find staff members in the New York office", "expected": "EMPLOYEE_SEARCH"},
+    {"domain": "employee", "query": "Which people joined the company recently?", "expected": "EMPLOYEE_SEARCH"},
+
+    {"domain": "employee", "query": "Tell me about employee E-2201", "expected": "EMPLOYEE_DETAILS"},
+    {"domain": "employee", "query": "What is Rahul's designation?", "expected": "EMPLOYEE_DETAILS"},
+    {"domain": "employee", "query": "Show me Anita's profile", "expected": "EMPLOYEE_DETAILS"},
+    {"domain": "employee", "query": "Who does Meera report to?", "expected": "EMPLOYEE_DETAILS"},
+
+    {"domain": "employee", "query": "How much vacation do I have remaining?", "expected": "EMPLOYEE_LEAVE"},
+    {"domain": "employee", "query": "I want to request time off next week", "expected": "EMPLOYEE_LEAVE"},
+    {"domain": "employee", "query": "What is my sick leave balance?", "expected": "EMPLOYEE_LEAVE"},
+    {"domain": "employee", "query": "Show the holidays I already took this year", "expected": "EMPLOYEE_LEAVE"},
+
+    {"domain": "contract", "query": "What's the weather today?", "expected": "UNKNOWN"},
+    {"domain": "contract", "query": "Book me a table for two at eight", "expected": "UNKNOWN"},
+    {"domain": "contract", "query": "How do I reset my router?", "expected": "UNKNOWN"},
+    {"domain": "contract", "query": "Who won the cricket match last night?", "expected": "UNKNOWN"},
+    {"domain": "contract", "query": "Translate this sentence into French", "expected": "UNKNOWN"},
+    {"domain": "contract", "query": "How many leave days do I have left?", "expected": "UNKNOWN"},
+    {"domain": "employee", "query": "Which contracts expire this year?", "expected": "UNKNOWN"},
+    {"domain": "employee", "query": "Play some music please", "expected": "UNKNOWN"},
+    {"domain": "employee", "query": "What is the capital of Japan?", "expected": "UNKNOWN"},
+    {"domain": "employee", "query": "Send an email to the vendor about the invoice", "expected": "UNKNOWN"}
+  ]
+}

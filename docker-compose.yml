@@ -1,0 +1,18 @@
+services:
+  intent-classifier:
+    build: .
+    image: intent-classifier:latest
+    container_name: intent-classifier
+    env_file: .env
+    environment:
+      # Container paths override the host-relative defaults in .env.
+      CHROMA_PATH: /app/data/chroma
+      # The model is baked into the image outside the volume.
+      MODEL_CACHE_DIR: /opt/models
+      INDEX_DIR: /app/data/indexes
+    ports:
+      - "8000:8000"
+    volumes:
+      # Keeps the intent catalogue and the model cache across rebuilds.
+      - ./data:/app/data
+    restart: unless-stopped
