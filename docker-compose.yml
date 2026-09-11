@@ -10,6 +10,7 @@ services:
       # The model is baked into the image outside the volume.
       MODEL_CACHE_DIR: /opt/models
       INDEX_DIR: /app/data/indexes
+      AUDIT_LOG_PATH: /app/data/audit/audit.jsonl
     ports:
       - "8000:8000"
     volumes:

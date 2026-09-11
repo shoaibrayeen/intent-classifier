@@ -377,6 +377,173 @@ hit with its score, the fused intent ranking, and the four confidence signals. T
 renders exactly that, which makes a surprising classification a five-second investigation rather
 than a guess.</p>
 
+<h2>After the intent: entities and tools</h2>
+
+<p>A classification on its own cannot call anything. Once an intent resolves, the engine
+extracts the values that intent declares and reports the call it maps to.</p>
+
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-label="Entity extraction and tool routing after classification">
+  <defs>
+    <marker id="c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </marker>
+  </defs>
+  <g color="var(--muted)">
+
+  <rect class="box" x="20" y="20" width="180" height="56" rx="9"/>
+  <text class="t-hd" x="38" y="44">intent resolved</text>
+  <text class="t-sm" x="38" y="63">confidently, not UNKNOWN</text>
+
+  <path class="arrow" d="M200,48 L248,48" marker-end="url(#c)"/>
+
+  <rect class="box" x="250" y="20" width="180" height="56" rx="9"/>
+  <text class="t-hd" x="268" y="44">entity schema</text>
+  <text class="t-sm" x="268" y="63">what this intent accepts</text>
+
+  <path class="arrow" d="M430,48 L478,48" marker-end="url(#c)"/>
+
+  <rect class="box" x="480" y="20" width="260" height="56" rx="9"/>
+  <text class="t-hd" x="498" y="44">extraction (LLM)</text>
+  <text class="t-sm" x="498" y="63">the only place generation is used</text>
+
+  <path class="arrow" d="M610,76 L610,106" marker-end="url(#c)"/>
+
+  <rect class="box-dense" x="330" y="108" width="410" height="72" rx="9"/>
+  <text class="t-hd" x="348" y="132">validation: the schema is an allowlist</text>
+  <text class="t-sm" x="348" y="151">coerce to the declared type · normalize enums and dates</text>
+  <text class="t-sm" x="348" y="167">drop every key the intent did not declare</text>
+
+  <path class="arrow" d="M535,180 L535,210" marker-end="url(#c)"/>
+
+  <rect class="box" x="330" y="212" width="410" height="70" rx="9"/>
+  <text class="t-hd" x="348" y="236">tool call</text>
+  <text class="t-sm" x="348" y="255">name, version, validated arguments, missing required</text>
+  <text class="t-sm" x="348" y="271">reported to the caller, never invoked here</text>
+
+  <rect class="box" x="20" y="108" width="280" height="72" rx="9"/>
+  <text class="t-hd" x="38" y="132">UNKNOWN takes the other path</text>
+  <text class="t-sm" x="38" y="151">no extraction, no tool, no LLM call</text>
+  <text class="t-sm" x="38" y="167">and no arguments invented from nothing</text>
+
+  </g>
+</svg>
+<figcaption>Extraction is the only stage that calls a language model, and it runs after the
+deterministic part of the pipeline has already committed to an answer.</figcaption>
+</figure>
+
+<h3>Everything the model returns is untrusted input</h3>
+<p>A language model will happily return a key that was never asked for, a date in whatever
+format it feels like, and an enum value that does not exist. Each value is coerced to the type
+the intent declared, enums are normalized to the declared spelling, dates become ISO 8601, and
+any undeclared key is discarded. A required entity that was not found leaves the tool call
+marked not ready, with the missing names listed, rather than calling a tool with a hole in its
+arguments.</p>
+
+<div class="note">
+  <strong>Extraction never runs for UNKNOWN.</strong>
+  Pulling arguments out of a request the system did not understand produces confident nonsense.
+  It is also never on the critical path: a provider timeout leaves the classification intact,
+  with empty entities and a status explaining why.
+</div>
+
+<h2>Running it in production</h2>
+
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="Cross-cutting concerns around the request path">
+  <rect class="box" x="20" y="20" width="720" height="56" rx="9"/>
+  <text class="t-hd" x="38" y="44">Request middleware</text>
+  <text class="t-sm" x="38" y="63">request id · latency · metrics by route template · trace span</text>
+
+  <rect class="box" x="20" y="88" width="230" height="66" rx="9"/>
+  <text class="t-hd" x="38" y="112">Authentication</text>
+  <text class="t-sm" x="38" y="131">API key, constant-time compare</text>
+  <text class="t-sm" x="38" y="147">scopes: admin &gt; write &gt; read</text>
+
+  <rect class="box" x="265" y="88" width="230" height="66" rx="9"/>
+  <text class="t-hd" x="283" y="112">Authorization</text>
+  <text class="t-sm" x="283" y="131">per-key domain allowlist</text>
+  <text class="t-sm" x="283" y="147">a hard boundary, not a filter</text>
+
+  <rect class="box" x="510" y="88" width="230" height="66" rx="9"/>
+  <text class="t-hd" x="528" y="112">Audit</text>
+  <text class="t-sm" x="528" y="131">append-only JSONL</text>
+  <text class="t-sm" x="528" y="147">query text is opt-in</text>
+
+  <rect class="box-dense" x="20" y="166" width="720" height="62" rx="9"/>
+  <text class="t-hd" x="38" y="190">Classification pipeline</text>
+  <text class="t-sm" x="38" y="209">per-stage timings · strategy assignment · index health · evaluation on demand</text>
+</svg>
+<figcaption>Each concern is a separate layer the pipeline does not know about, which is what
+keeps the engine testable without a web server.</figcaption>
+</figure>
+
+<table>
+  <thead><tr><th>Concern</th><th>Decision</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Authentication</td>
+      <td>API keys rather than OAuth. This is a service-to-service component, and an internal
+      platform with no identity provider is better served by a credential the caller can rotate
+      than by a login flow nobody operates.</td>
+    </tr>
+    <tr>
+      <td>Health probes are unauthenticated</td>
+      <td>A probe that needs a secret is a probe that breaks when the secret rotates.</td>
+    </tr>
+    <tr>
+      <td>Metrics labelled by route template</td>
+      <td>A label containing a domain id creates a new time series per domain. That is how a
+      metrics backend falls over.</td>
+    </tr>
+    <tr>
+      <td>Audit log as append-only JSONL</td>
+      <td>The workload is append-heavy and read rarely, and a file survives the database being
+      rebuilt, which matters when the database is also the configuration store.</td>
+    </tr>
+    <tr>
+      <td>Query text not recorded by default</td>
+      <td>User queries carry personal data. Recording them is a decision an operator makes
+      deliberately.</td>
+    </tr>
+    <tr>
+      <td>Tracing off by default</td>
+      <td>A collector is infrastructure, not a library. With no endpoint configured the exporter
+      would retry in the background and add latency to every request.</td>
+    </tr>
+    <tr>
+      <td>Indexes warmed at startup</td>
+      <td>Otherwise the first request after a restart pays the build cost, and index health
+      reports a problem for a service that is perfectly healthy.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Changing retrieval safely</h2>
+
+<p>Retrieval is the highest-risk thing to change here, because a regression is invisible until
+someone notices the wrong tool being called. Variants are therefore named and explicit, and a
+request is assigned one by hashing its request id, so the same id always lands on the same
+pipeline and a reported result can be reproduced.</p>
+
+<table>
+  <thead><tr><th>Strategy</th><th>Top-1</th><th>UNKNOWN detection</th><th>p50</th></tr></thead>
+  <tbody>
+    <tr><td>hybrid_rrf (default)</td><td>90.6%</td><td>90%</td><td>3.4 ms</td></tr>
+    <tr><td>dense_only</td><td>87.5%</td><td>70%</td><td>3.4 ms</td></tr>
+    <tr><td>bm25_only</td><td>65.6%</td><td>40%</td><td>0.6 ms</td></tr>
+    <tr><td>hybrid_wide</td><td>87.5%</td><td>100%</td><td>3.7 ms</td></tr>
+  </tbody>
+</table>
+
+<p>This is the argument for hybrid retrieval restated as a measurement rather than an opinion.
+Either retriever alone is worse, and lexical-only is dramatically worse at knowing when to
+decline. A single-retriever variant is scored against its own ceiling, so it is not penalised
+for evidence it was never configured to collect.</p>
+
+<p>The same evaluation runs from the UI against the live catalogue, so a threshold change or a
+new batch of examples can be judged immediately instead of on trust.</p>
+
 <h2>Deliberate boundaries</h2>
 
 <table>
@@ -384,8 +551,14 @@ than a guess.</p>
   <tbody>
     <tr>
       <td>Classification is separate from tool execution</td>
-      <td>A result reports the mapped tool; the caller decides whether to run it. A
-      side-effect-free classifier can be shared by an API, a UI and an agent.</td>
+      <td>A result reports the mapped tool; the caller decides whether to run it. The caller
+      owns the credentials, the retry policy and the blast radius. A side-effect-free classifier
+      can be shared by an API, a UI and an agent at once.</td>
+    </tr>
+    <tr>
+      <td>Retrieval is synchronous, extraction is not</td>
+      <td>Retrieval is CPU-bound and runs in a worker thread; extraction is a network call and
+      runs on the event loop. Mixing them in one handler is the mistake this separation avoids.</td>
     </tr>
     <tr>
       <td>The LLM is not in the classification path</td>
@@ -430,12 +603,15 @@ costs more than a refusal.</p>
 
 <h2>What comes next</h2>
 <ul>
-  <li><strong>Entity extraction.</strong> Intents already carry an entity schema and the LLM
-  client is wired. Turning it on fills the <code>entities</code> field.</li>
-  <li><strong>Tool routing.</strong> A separate layer that takes a classification plus entities
-  and invokes the mapped tool with validated arguments.</li>
-  <li><strong>Production hardening.</strong> Authentication, per-domain authorization, audit
-  logs, latency metrics, and feedback capture to recalibrate thresholds on real traffic.</li>
+  <li><strong>Feedback capture.</strong> Recording whether a classification was acted on turns
+  the audit log into training signal and lets thresholds be recalibrated on real traffic rather
+  than on a fixed evaluation set.</li>
+  <li><strong>A reranker.</strong> The remaining errors are ranking decisions between close
+  neighbours, which is exactly what a cross-encoder is good at. Top-3 already sits at 100%, so
+  the headroom is real.</li>
+  <li><strong>PostgreSQL for configuration.</strong> Not needed yet. It becomes justified when
+  multi-tenant authorization or heavy audit querying arrives; the repository protocols exist so
+  that swap stays contained.</li>
 </ul>
 
 </div>

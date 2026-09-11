@@ -4,7 +4,10 @@ def test_intent_carries_tool_and_entity_schema(client, contract_domain):
 
     intent = client.get(f"/api/v1/domains/{domain_id}/intents/{intent_id}").json()
     assert intent["tool"]["name"] == "search_contracts"
-    assert intent["entity_schema"] == {"counterparty": {"type": "string"}}
+    assert intent["entity_schema"] == {
+        "counterparty": {"type": "string", "required": True},
+        "status": {"type": "enum", "values": ["ACTIVE", "EXPIRED"]},
+    }
     assert intent["example_count"] == 8
 
 

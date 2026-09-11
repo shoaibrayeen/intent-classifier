@@ -78,6 +78,9 @@ def create_app(settings: Settings | None = None, llm_client: LLMClient | None = 
                 "ENTITY_EXTRACTION_ENABLED is true but no LLM provider is configured; "
                 "classifications will return no entities"
             )
+        container = app.state.container
+        warmed = container.index_manager.warm([d.id for d in container.domains.list()])
+        logger.info("warmed %d domain index(es)", warmed)
         logger.info("%s %s ready", settings.app_name, settings.app_version)
         yield
         tracing.shutdown()

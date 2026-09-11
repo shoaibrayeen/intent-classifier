@@ -6,10 +6,15 @@ confidence, and says `UNKNOWN` rather than guessing when nothing fits.
 
 ```
 POST /api/v1/classify
-{ "domain": "contract", "text": "Show me all contracts with Microsoft expiring this year" }
+{ "domain": "contract", "text": "Show me all active contracts with Microsoft" }
 
-{ "intent": "CONTRACT_SEARCH", "confidence": 0.71,
-  "tool": { "name": "search_contracts", "version": "v1" }, "entities": {} }
+{ "intent": "CONTRACT_SEARCH",
+  "confidence": 0.80,
+  "entities": { "counterparty": "Microsoft", "status": "ACTIVE" },
+  "tool": { "name": "search_contracts", "version": "v1",
+            "arguments": { "counterparty": "Microsoft", "status": "ACTIVE" },
+            "ready": true },
+  "latency_ms": 11.0 }
 ```
 
 Adding an intent means adding example phrasings. There is no model training
@@ -90,6 +95,132 @@ lexical retriever scored. The response says which:
 This matters most for agentic callers, where a confident wrong answer triggers
 the wrong tool.
 
+## Entities and tools
+
+Classification alone is not enough to call anything. Once an intent resolves,
+the engine extracts the values that intent declares and reports the call it maps
+to.
+
+```
+query -> intent -> entity schema -> extraction -> validated arguments -> tool call
+```
+
+**Extraction runs only after a confident match**, never for `UNKNOWN`. Pulling
+arguments out of a request the system did not understand produces confident
+nonsense, which is worse than no answer. It is also never on the critical path:
+if the provider times out or returns junk, the classification still returns, with
+`entities` empty and `entity_extraction.status` saying why.
+
+Whatever the model returns is treated as untrusted input. Each value is coerced
+to the type the intent declared, enum values are normalized to the declared
+spelling, dates become ISO 8601, and **any key the intent did not declare is
+dropped**. The schema is an allowlist, not a suggestion.
+
+```json
+{ "counterparty": {"type": "string", "required": true},
+  "status":       {"type": "enum", "values": ["ACTIVE", "EXPIRED"]},
+  "signed_after": {"type": "date"} }
+```
+
+Supported types: `string`, `integer`, `number`, `boolean`, `date`, `enum`,
+`array`. A required entity that was not found leaves the tool call marked
+`ready: false` with the missing names listed, rather than silently calling a
+tool with a hole in its arguments.
+
+Extraction is off by default. Set `OPENAI_API_KEY`, then either turn it on
+globally with `ENTITY_EXTRACTION_ENABLED=true` or per request with
+`"extract_entities": true`.
+
+### Tool routing stops before execution
+
+The response says what should be called and with which arguments. It never calls
+it. Execution belongs to the caller, who owns the credentials, the retry policy
+and the blast radius. A classifier that also invokes tools cannot be safely
+shared by a UI, an API and an agent at once.
+
+## Security
+
+Authentication is off by default so the service runs out of the box. Turn it on
+with `AUTH_ENABLED=true` and supply keys as `secret:domains:scopes`:
+
+```
+API_KEYS=ops-key:*:admin, contract-svc:contract|legal:classify, dashboard:*:read
+```
+
+Present a key as `X-API-Key` or `Authorization: Bearer`. Scopes nest:
+`admin` > `write` > `read` > `classify`. The domain list is a hard boundary: a
+key scoped to `contract` cannot classify against, read, or even see another
+domain. `/health` needs no credential, because a probe that requires a secret is
+a probe that stops working when the secret rotates.
+
+Keys are compared in constant time and are never written to logs; the audit log
+records a short fingerprint instead.
+
+## Operating it
+
+| Endpoint | What it gives you |
+|---|---|
+| `/api/v1/health` | store, model, and which features are actually on |
+| `/api/v1/health/index` | per-domain index state, and whether the two indexes agree |
+| `/api/v1/metrics` | Prometheus metrics |
+| `/api/v1/audit` | recent audit entries (admin scope) |
+| `/api/v1/strategies` | available retrieval variants |
+
+`/ui/operations` shows all of it on one page.
+
+**Request ids.** Every response carries `X-Request-ID`, echoing one you supply.
+The same id appears in the classification body, the audit record and the trace,
+so "this query returned the wrong intent" is traceable from one value.
+
+**Metrics** are labelled by route *template*, never by concrete path. A label
+containing a domain id would create a new time series per domain, which is how a
+metrics backend falls over.
+
+**The audit log** is append-only JSONL at `AUDIT_LOG_PATH`: one object per line
+with the request id, principal, action, outcome, intent, confidence and latency.
+Query text is **not** recorded unless you set `AUDIT_LOG_QUERY_TEXT=true`, since
+user queries can carry personal data.
+
+**Tracing** is opt-in. With no collector configured, an exporter would retry in
+the background and add latency to every request. Set `TRACING_ENABLED=true` and
+`OTLP_ENDPOINT` when you have one.
+
+**Indexes are warmed at startup**, so a restart does not make the first
+classification pay the build cost, and index health tells the truth immediately.
+
+## A/B testing retrieval
+
+Changing retrieval is the riskiest change this service can make, so variants are
+named, explicit, and assigned deterministically by hashing the request id. The
+same id always lands on the same pipeline, which makes a reported result
+reproducible.
+
+| Variant | What it does |
+|---|---|
+| `hybrid_rrf` | dense and BM25 fused. The default. |
+| `dense_only` | semantic retrieval alone |
+| `bm25_only` | lexical retrieval alone |
+| `hybrid_rrf_k20` | smaller fusion constant, sharper top ranks |
+| `hybrid_top1` | score each intent by its single best example |
+| `hybrid_wide` | retrieve twice as many candidates |
+
+Pin one per request with `"variant": "dense_only"`, or enable assignment with
+`AB_TESTING_ENABLED=true`. Measured on the evaluation set:
+
+| Strategy | Top-1 | UNKNOWN detection | p50 |
+|---|---|---|---|
+| hybrid_rrf | 90.6% | 90% | 3.4 ms |
+| dense_only | 87.5% | 70% | 3.4 ms |
+| bm25_only | 65.6% | 40% | 0.6 ms |
+| hybrid_wide | 87.5% | 100% | 3.7 ms |
+
+That is the argument for the hybrid default stated as a measurement: either
+retriever alone is worse, and lexical-only is much worse at knowing when to
+decline.
+
+Single-retriever variants are scored against their own ceiling rather than
+penalised for evidence they were never configured to collect.
+
 ## Quickstart (Docker)
 
 ```bash
@@ -131,6 +262,8 @@ embedding model (~67 MB) into `./data/models`.
 | `/ui/domains/{id}` | intents in a domain, tool mapping, index status, rebuild |
 | `/ui/domains/{id}/intents/{id}` | entity schema, training examples, add and delete |
 | `/ui/playground` | classify a query and see every retrieval stage |
+| `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
+| `/ui/operations` | index health, configuration in force, recent activity |
 
 The playground is the debugging tool: it shows the normalized query, the dense
 hits with cosine similarities, the BM25 hits with tokens and scores, the fused
@@ -147,6 +280,10 @@ Base path `/api/v1`.
 | `POST` | `/classify` | classify a query |
 | `POST` | `/classify/debug` | same, with the full retrieval trace |
 | `GET` | `/health` | store, model and configuration status |
+| `GET` | `/health/index` | per-domain index health |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/audit` | recent audit entries |
+| `GET` | `/strategies` | available retrieval variants |
 | `POST` `GET` | `/domains` | create, list |
 | `GET` `PUT` `DELETE` | `/domains/{domainId}` | read, update, delete (cascades) |
 | `POST` `GET` | `/domains/{domainId}/intents` | create, list |
@@ -226,6 +363,14 @@ Every value has a working default in `.env`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `OPENAI_API_KEY` | *(empty)* | only needed for entity extraction |
+| `LLM_TIMEOUT_SECONDS` | `10` | extraction gives up after this |
+| `AUTH_ENABLED` / `API_KEYS` | `false` / *(empty)* | API key authentication |
+| `AB_TESTING_ENABLED` / `AB_VARIANTS` | `false` / `hybrid_rrf,dense_only` | strategy assignment |
+| `DEFAULT_STRATEGY` | `hybrid_rrf` | retrieval strategy when A/B is off |
+| `METRICS_ENABLED` | `true` | serve `/api/v1/metrics` |
+| `AUDIT_LOG_ENABLED` / `AUDIT_LOG_PATH` | `true` / `./data/audit/audit.jsonl` | audit trail |
+| `AUDIT_LOG_QUERY_TEXT` | `false` | record raw query text (personal data) |
+| `TRACING_ENABLED` / `OTLP_ENDPOINT` | `false` / `localhost:4317` | OpenTelemetry |
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | override for a compatible endpoint |
 | `OPENAI_MODEL` | `gpt-4o-mini` | model used for extraction |
 | `ENTITY_EXTRACTION_ENABLED` | `false` | turn on the LLM extraction step |
@@ -247,6 +392,7 @@ Every value has a working default in `.env`.
 uv run pytest                              # unit, integration, evaluation
 uv run python -m tests.evaluation.run_eval # accuracy report
 uv run python -m tests.evaluation.run_eval --sweep    # calibrate thresholds
+uv run python -m tests.evaluation.run_eval --compare  # compare retrieval strategies
 uv run python -m tests.evaluation.run_eval --verbose  # every prediction
 ```
 
@@ -269,13 +415,20 @@ costs more than a refusal.
 `tests/evaluation/test_evaluation.py` turns these numbers into a regression
 floor, so a change that degrades retrieval fails the suite.
 
-## What this phase does not do
+## Deliberate boundaries
 
-- **Entity extraction** is wired but disabled. Intents already carry an
-  `entity_schema`, and `entities` is always `{}` for now.
-- **Tool invocation** is out of scope by design. A result reports the mapped
-  tool; the caller decides whether to run it. Keeping the classifier free of
-  side effects is what makes it reusable by an API, a UI and an agent alike.
+- **Tool invocation stays out of scope.** A result reports the mapped tool; the
+  caller decides whether to run it.
+- **The LLM is never in the classification path.** Retrieval is deterministic,
+  inspectable and evaluable. Generation is reserved for entity extraction, where
+  it is genuinely the right tool.
+- **The BM25 index is never persisted as truth.** Rebuilding from Chroma is
+  fast, and a second on-disk copy drifts the moment the tokenizer changes.
+- **One worker only.** Embedded Chroma is a single-writer store.
+
+Chroma remains the configuration store. The repository layer sits behind
+protocols, so moving configuration to PostgreSQL is a contained change if
+multi-tenant authorization or heavy audit querying later justifies it.
 
 ## Troubleshooting
 
@@ -295,4 +448,5 @@ concurrent writers can corrupt the on-disk store.
 ## Stack
 
 FastAPI · Pydantic v2 · ChromaDB · FastEmbed (`bge-small-en-v1.5`) · rank-bm25 ·
-Jinja2 + htmx · uv · pytest
+OpenAI (entity extraction only) · Prometheus · OpenTelemetry · Jinja2 + htmx ·
+uv · pytest

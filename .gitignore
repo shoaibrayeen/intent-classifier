@@ -1,4 +1,9 @@
-# runtime data: chroma store, embedding model cache, bm25 artifacts
+# local configuration: may hold an API key. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# runtime data: chroma store, embedding model cache, bm25 artifacts, audit log
 data/
 
 # python

@@ -37,6 +37,7 @@ class Prediction:
     best_similarity: float
     ranked: list[str]
     latency_ms: float
+    used_dense: bool = True
 
 
 async def predict(
@@ -54,6 +55,9 @@ async def predict(
             debug=True,
         )
         breakdown = result.debug.confidence_breakdown if result.debug else None
+        used = BUILTIN_STRATEGIES.get(
+            result.debug.strategy if result.debug else "", BUILTIN_STRATEGIES["hybrid_rrf"]
+        )
         predictions.append(
             Prediction(
                 domain=case["domain"],
@@ -64,6 +68,7 @@ async def predict(
                 best_similarity=breakdown.best_similarity if breakdown else 0.0,
                 ranked=[item.intent for item in result.top_intents],
                 latency_ms=result.latency_ms,
+                used_dense=used.use_dense,
             )
         )
     return predictions
@@ -77,7 +82,10 @@ def score(predictions: list[Prediction], settings: Settings) -> dict:
     def decide(p: Prediction) -> str:
         if not p.ranked:
             return UNKNOWN_INTENT
-        if p.best_similarity < settings.min_dense_similarity:
+        # The similarity floor only applies when dense retrieval actually ran;
+        # a lexical-only strategy has no similarity to judge and would
+        # otherwise be scored as rejecting everything.
+        if p.used_dense and p.best_similarity < settings.min_dense_similarity:
             return UNKNOWN_INTENT
         if p.confidence < settings.confidence_threshold:
             return UNKNOWN_INTENT

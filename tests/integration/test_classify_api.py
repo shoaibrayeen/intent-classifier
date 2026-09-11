@@ -26,10 +26,12 @@ def test_response_carries_the_configured_tool(client, contract_domain):
     tool = body["tool"]
     assert tool["name"] == "search_contracts"
     assert tool["version"] == "v1"
-    # No extraction ran, so there are no arguments yet, and nothing is required.
+    # Entity extraction is off by default, so the mapping is reported but no
+    # arguments were gathered. A required entity therefore shows as missing,
+    # and the call is correctly marked not ready to invoke.
     assert tool["arguments"] == {}
-    assert tool["missing_required"] == []
-    assert tool["ready"] is True
+    assert tool["missing_required"] == ["counterparty"]
+    assert tool["ready"] is False
 
 
 def test_domain_can_be_addressed_by_id_or_name(client, contract_domain):

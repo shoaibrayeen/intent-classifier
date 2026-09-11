@@ -101,6 +101,17 @@ class IndexManager:
         self.mark_dirty(domain_id)
         return self.build(domain_id)
 
+    def warm(self, domain_ids: list[str]) -> int:
+        """Build every domain's index up front.
+
+        Without this the first classification after a restart pays the build
+        cost, and index health reports "not_built" for a service that is in
+        fact perfectly healthy.
+        """
+        for domain_id in domain_ids:
+            self.build(domain_id)
+        return len(domain_ids)
+
     def clear(self) -> None:
         """Forget every cached index (used when the store is reset)."""
         with self._lock:
