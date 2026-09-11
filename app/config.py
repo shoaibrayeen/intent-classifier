@@ -53,12 +53,29 @@ class Settings(BaseSettings):
     w_support: float = 0.15
 
     # --- LLM / entity extraction ---------------------------------------
+    #: auto = openai when a key is set, otherwise none. mock = offline
+    #: rule-based provider for local runs and tests (no key needed).
+    llm_provider: Literal["auto", "openai", "mock", "none"] = "auto"
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
     entity_extraction_enabled: bool = False
     llm_timeout_seconds: float = Field(default=10.0, gt=0)
     llm_max_retries: int = Field(default=1, ge=0, le=5)
+
+    # --- multi-turn sessions --------------------------------------------
+    sessions_enabled: bool = True
+    #: Earlier turns shown to the extractor as conversation history.
+    session_history_turns: int = Field(default=5, ge=0, le=50)
+    #: Turns kept per session; older ones are pruned on write.
+    session_max_turns: int = Field(default=50, ge=1, le=1000)
+    #: Turns older than this are dropped, checked lazily on write.
+    session_ttl_seconds: int = Field(default=7 * 24 * 3600, ge=60)
+    #: When a short follow-up cannot be classified on its own, retry it with
+    #: the previous question prepended.
+    context_retrieval_enabled: bool = True
+    #: Carry entities from earlier turns into a new intent that accepts them.
+    entity_carry_over_enabled: bool = True
 
     # --- A/B testing of retrieval strategies ---------------------------
     ab_testing_enabled: bool = False

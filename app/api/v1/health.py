@@ -26,8 +26,10 @@ def health(container: Container = Depends(get_container)) -> dict:
         "entity_extraction": {
             "enabled": container.entity_extractor.enabled,
             "provider_configured": container.entity_extractor.available,
+            "provider": container.entity_extractor.provider_name,
             "model": container.settings.openai_model,
         },
+        "sessions_enabled": container.sessions.enabled,
         "auth_enabled": container.authenticator.enabled,
         "tracing_enabled": tracing.enabled(),
         "ab_testing_enabled": container.strategies.enabled,

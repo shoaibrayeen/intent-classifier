@@ -25,6 +25,8 @@ class LLMUnavailable(Exception):
 class LLMClient(Protocol):
     """What the extractor needs from a provider."""
 
+    name: str
+
     @property
     def configured(self) -> bool: ...
 
@@ -55,6 +57,8 @@ def parse_json_object(content: str) -> dict[str, Any]:
 class OpenAIChatClient:
     """OpenAI Chat Completions. Also works against any compatible endpoint
     through ``OPENAI_BASE_URL``."""
+
+    name = "openai"
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -94,6 +98,8 @@ class OpenAIChatClient:
 class StubLLMClient:
     """Never configured, never called. Used when no provider is set up."""
 
+    name = "none"
+
     @property
     def configured(self) -> bool:
         return False
@@ -108,6 +114,8 @@ class ScriptedLLMClient:
     ``responses`` maps a substring of the user message to the object to return.
     Anything else returns ``default``. Raises whatever is in ``raises``.
     """
+
+    name = "scripted"
 
     def __init__(
         self,

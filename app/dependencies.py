@@ -21,6 +21,7 @@ from app.services.domain_service import DomainService
 from app.services.example_service import ExampleService
 from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
+from app.services.session_service import SessionService
 
 
 def get_container(request: Request) -> Container:
@@ -45,6 +46,10 @@ def get_index_manager(request: Request) -> IndexManager:
 
 def get_classification_service(request: Request) -> ClassificationService:
     return get_container(request).classification
+
+
+def get_session_service(request: Request) -> SessionService:
+    return get_container(request).sessions
 
 
 def get_principal(request: Request) -> Principal:

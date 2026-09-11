@@ -28,6 +28,40 @@
   </div>
 </section>
 
+{% if result.context %}
+<section class="card">
+  <div class="card-head">
+    <h2>Conversation <span class="badge">{{ result.context.session_id }}</span> <span class="badge">turn {{ result.context.turn }}</span></h2>
+    <button class="danger small" hx-delete="/ui/playground/session/{{ result.context.session_id }}" hx-swap="none"
+            hx-confirm="Forget this session's turns?">Clear session</button>
+  </div>
+  {% if result.context.used_for_retrieval %}
+  <p class="small">Read against the previous turn: <span class="mono">{{ result.context.retrieval_text }}</span></p>
+  {% elif result.context.previous_turns %}
+  <p class="muted small">{{ result.context.previous_turns }} earlier turn(s) available; this one stood on its own.</p>
+  {% else %}
+  <p class="muted small">First turn in this session.</p>
+  {% endif %}
+  {% if result.context.carried_entities %}
+  <p class="small">Carried from earlier turns: <span class="mono">{{ result.context.carried_entities | join(", ") }}</span></p>
+  {% endif %}
+  {% if turns %}
+  <table>
+    <thead><tr><th>#</th><th>Request</th><th>Intent</th><th class="num">Conf</th><th>Entities</th></tr></thead>
+    <tbody>
+      {% for t in turns %}
+      <tr {% if t.turn == result.context.turn %}class="current"{% endif %}>
+        <td class="num">{{ t.turn }}</td><td>{{ t.text }}</td><td class="mono small">{{ t.intent }}</td>
+        <td class="num">{{ t.confidence | num(2) }}</td>
+        <td class="mono small">{{ t.entities | json_pretty if t.entities else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+
 <div class="grid">
   <section class="card">
     <h2>Entities</h2>

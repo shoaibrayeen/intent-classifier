@@ -17,6 +17,7 @@
   <section class="card">
     <h2>Entity schema</h2>
     <pre class="mono">{{ intent.entity_schema | json_pretty }}</pre>
+    {% if intent.extraction_hints %}<p class="small"><span class="muted">Hints:</span> {{ intent.extraction_hints }}</p>{% endif %}
     <p class="muted small">Extraction runs only when entity extraction is enabled.</p>
   </section>
 </div>

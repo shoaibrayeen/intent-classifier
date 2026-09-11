@@ -3,6 +3,10 @@
 This is the async seam. Retrieval is CPU-bound and synchronous, so it runs in a
 worker thread; entity extraction is a network call, so it runs on the event
 loop. Mixing the two in one handler is what this class exists to get right.
+
+With a session id the turn is also read against the conversation so far: a
+follow-up that cannot stand alone is retried with the previous question, and
+entities named earlier carry into an intent that accepts them.
 """
 
 from __future__ import annotations
@@ -17,14 +21,17 @@ from app.config import Settings
 from app.models.classification import (
     ClassifyRequest,
     ClassifyResponse,
+    ContextInfo,
     EntityExtractionInfo,
+    SessionTurn,
 )
 from app.observability import metrics, tracing
 from app.observability.audit import AuditLog
-from app.observability.context import get_request_id
+from app.observability.context import get_principal, get_request_id
 from app.services.classifier import ClassificationOutcome, IntentClassifier
 from app.services.domain_service import DomainService
 from app.services.llm.entity_extractor import EntityExtractor
+from app.services.session_service import SessionService
 from app.services.strategies import StrategySelector
 from app.services.tool_router import ToolRouter
 
@@ -41,6 +48,7 @@ class ClassificationService:
         router: ToolRouter,
         strategies: StrategySelector,
         audit: AuditLog,
+        sessions: SessionService,
     ) -> None:
         self._settings = settings
         self._classifier = classifier
@@ -49,6 +57,7 @@ class ClassificationService:
         self._router = router
         self._strategies = strategies
         self._audit = audit
+        self._sessions = sessions
 
     async def classify(self, payload: ClassifyRequest, debug: bool = False) -> ClassifyResponse:
         started = time.perf_counter()
@@ -56,16 +65,50 @@ class ClassificationService:
         domain = self._domains.resolve(payload.domain)
         strategy = self._strategies.select(request_id or payload.text, payload.variant)
 
+        # --- conversation so far -------------------------------------------
+        history: list[SessionTurn] = []
+        context: ContextInfo | None = None
+        session_active = bool(payload.session_id) and self._sessions.enabled
+        if session_active:
+            history = self._sessions.history(payload.session_id, domain.id)
+            if not payload.use_context:
+                history = []
+            context = ContextInfo(
+                session_id=payload.session_id,
+                turn=self._sessions.next_turn_number(
+                    self._sessions.all_turns(payload.session_id)
+                    if not payload.use_context
+                    else history
+                ),
+                previous_turns=len(history),
+                previous_intent=history[-1].intent if history else None,
+            )
+
+        # --- retrieval -------------------------------------------------------
         with tracing.span("classify", domain=domain.name, strategy=strategy.name):
             outcome: ClassificationOutcome = await run_in_threadpool(
                 self._classifier.classify, domain, payload.text, strategy
             )
 
+        # A follow-up like "when do they expire" has no anchor on its own.
+        # Retry with the previous question, and keep the result only if it
+        # actually resolves -- context may rescue a turn, never overrule one.
+        if context is not None and not outcome.matched:
+            contextual_text = self._sessions.contextual_text(history, payload.text)
+            if contextual_text:
+                with tracing.span("classify.contextual", domain=domain.name):
+                    retried: ClassificationOutcome = await run_in_threadpool(
+                        self._classifier.classify, domain, contextual_text, strategy
+                    )
+                if retried.matched:
+                    outcome = retried
+                    context.used_for_retrieval = True
+                    context.retrieval_text = contextual_text
+
+        # --- entities ----------------------------------------------------------
         entities: dict = {}
         extraction: EntityExtractionInfo | None = None
 
-        # Extraction runs only for a confident result. Pulling arguments out of a
-        # request the engine did not understand produces confident nonsense.
         if outcome.matched and outcome.intent is not None:
             wanted = (
                 payload.extract_entities
@@ -79,6 +122,9 @@ class ClassificationService:
                         payload.text,
                         outcome.intent.entity_schema,
                         today=datetime.now(UTC).date().isoformat(),
+                        domain=domain,
+                        intent=outcome.intent,
+                        history=history,
                     )
                 elapsed = time.perf_counter() - extraction_started
                 outcome.timings.extraction_ms = round(elapsed * 1000, 3)
@@ -93,10 +139,32 @@ class ClassificationService:
                     status="disabled", detail="entity extraction is turned off"
                 )
 
+            if context is not None and history:
+                entities, carried = self._sessions.carry_over(
+                    history, entities, outcome.intent.entity_schema
+                )
+                context.carried_entities = carried
+
         tool = self._router.route(outcome.intent, entities) if outcome.intent else None
 
         total_seconds = time.perf_counter() - started
         outcome.timings.total_ms = round(total_seconds * 1000, 3)
+
+        # --- remember this turn --------------------------------------------------
+        if context is not None:
+            self._sessions.record(
+                payload.session_id,
+                domain.id,
+                SessionTurn(
+                    turn=context.turn,
+                    text=payload.text,
+                    intent=outcome.intent_name,
+                    intent_id=outcome.intent.id if outcome.intent else None,
+                    confidence=outcome.confidence,
+                    entities=entities,
+                ),
+                principal=get_principal(),
+            )
 
         outcome_label = "matched" if outcome.matched else "unknown"
         metrics.classifications.labels(outcome=outcome_label, strategy=strategy.name).inc()
@@ -114,6 +182,9 @@ class ClassificationService:
             entity_count=len(entities),
             tool=tool.name if tool else None,
             latency_ms=outcome.timings.total_ms,
+            session_id=payload.session_id,
+            turn=context.turn if context else None,
+            context_used=context.used_for_retrieval if context else False,
             query=self._audit.record_query(payload.text),
         )
 
@@ -130,5 +201,6 @@ class ClassificationService:
             top_intents=outcome.ranked[:5],
             latency_ms=outcome.timings.total_ms,
             request_id=request_id or None,
+            context=context,
             debug=outcome.to_debug() if debug else None,
         )

@@ -28,6 +28,15 @@ CATALOGUE: list[dict[str, Any]] = [
     {
         "name": "contract",
         "description": "Contract and agreement operations",
+        "system_instructions": (
+            "Contracts are also called agreements, MSAs, SOWs and deals. "
+            "A counterparty is the other organisation on the contract, never our own company. "
+            "Contract ids look like C-1042. Never infer a status that is not stated."
+        ),
+        "user_instructions": (
+            "Users are legal and procurement staff. They name vendors by brand "
+            "(Microsoft, Oracle) and refer to renewal and expiry interchangeably."
+        ),
         "intents": [
             {
                 "name": "CONTRACT_SEARCH",
@@ -35,9 +44,10 @@ CATALOGUE: list[dict[str, Any]] = [
                 "tool": "search_contracts",
                 "entity_schema": {
                     "counterparty": {"type": "string"},
-                    "status": {"type": "string"},
+                    "status": {"type": "enum", "values": ["ACTIVE", "EXPIRED", "DRAFT"]},
                     "signed_after": {"type": "date"},
                 },
+                "extraction_hints": "'live' and 'current' mean ACTIVE.",
                 "examples": [
                     "Find all contracts with Microsoft",
                     "Show me Microsoft agreements",
@@ -74,7 +84,9 @@ CATALOGUE: list[dict[str, Any]] = [
                 "entity_schema": {
                     "period": {"type": "string"},
                     "counterparty": {"type": "string"},
+                    "expiration_year": {"type": "integer"},
                 },
+                "extraction_hints": "'this year' resolves to the current year from 'today'.",
                 "examples": [
                     "Which contracts expire this year?",
                     "Show agreements expiring next month",
@@ -104,6 +116,14 @@ CATALOGUE: list[dict[str, Any]] = [
     {
         "name": "employee",
         "description": "People and workforce operations",
+        "system_instructions": (
+            "Employee ids look like E-2201. 'I', 'me' and 'my' refer to the person asking; "
+            "do not turn them into an employee_name. Departments and offices are locations "
+            "or teams, not people."
+        ),
+        "user_instructions": (
+            "Users are HR staff and employees asking about themselves or colleagues."
+        ),
         "intents": [
             {
                 "name": "EMPLOYEE_SEARCH",
@@ -163,7 +183,12 @@ def seed(container: Container) -> dict[str, int]:
     for domain_spec in CATALOGUE:
         try:
             domain = container.domains.create(
-                DomainCreate(name=domain_spec["name"], description=domain_spec["description"])
+                DomainCreate(
+                    name=domain_spec["name"],
+                    description=domain_spec["description"],
+                    system_instructions=domain_spec.get("system_instructions", ""),
+                    user_instructions=domain_spec.get("user_instructions", ""),
+                )
             )
             stats["domains"] += 1
         except ConflictError:
@@ -179,6 +204,7 @@ def seed(container: Container) -> dict[str, int]:
                         description=intent_spec["description"],
                         tool=ToolRef(name=intent_spec["tool"], version="v1"),
                         entity_schema=intent_spec["entity_schema"],
+                        extraction_hints=intent_spec.get("extraction_hints", ""),
                     ),
                 )
                 stats["intents"] += 1
@@ -212,6 +238,8 @@ def export_catalogue(container: Container) -> dict[str, Any]:
         domain_entry = {
             "name": domain.name,
             "description": domain.description,
+            "system_instructions": domain.system_instructions,
+            "user_instructions": domain.user_instructions,
             "intents": [],
         }
         for intent in container.intents.list(domain.id):
@@ -221,6 +249,7 @@ def export_catalogue(container: Container) -> dict[str, Any]:
                     "description": intent.description,
                     "tool": intent.tool.name,
                     "entity_schema": intent.entity_schema,
+                    "extraction_hints": intent.extraction_hints,
                     "examples": [e.text for e in container.examples.list(domain.id, intent.id)],
                 }
             )

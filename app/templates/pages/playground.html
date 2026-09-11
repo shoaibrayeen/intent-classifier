@@ -31,13 +31,20 @@
         </select>
       </label>
     </div>
+    <div class="row">
+      <label>Session id <span class="muted small">(same id across turns = one conversation)</span>
+        <input name="session_id" value="{{ suggested_session if sessions_enabled else '' }}" maxlength="120"
+               pattern="[A-Za-z0-9_.\-:@]+" {% if not sessions_enabled %}disabled placeholder="sessions are disabled"{% endif %}>
+      </label>
+    </div>
     <label class="inline">
-      <input type="checkbox" name="extract_entities" value="1" {% if not extraction_available %}disabled{% endif %}>
+      <input type="checkbox" name="extract_entities" value="1" {% if not extraction_available %}disabled{% endif %}
+             {% if extraction_available and extraction_enabled %}checked{% endif %}>
       Extract entities
       {% if not extraction_available %}
-        <span class="muted small">(needs an LLM provider: set OPENAI_API_KEY)</span>
-      {% elif not extraction_enabled %}
-        <span class="muted small">(off by default; ticking this enables it for one request)</span>
+        <span class="muted small">(needs a provider: set OPENAI_API_KEY, or LLM_PROVIDER=mock to run offline)</span>
+      {% else %}
+        <span class="muted small">(provider: {{ provider }}{% if not extraction_enabled %}; off by default, ticking enables it for one request{% endif %})</span>
       {% endif %}
     </label>
     <button type="submit">Classify <span id="classify-busy" class="htmx-indicator">…</span></button>

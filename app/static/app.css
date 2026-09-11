@@ -139,3 +139,8 @@ label.inline input[type="checkbox"] { width: auto; margin: 0; }
 /* htmx request indicator */
 .htmx-indicator { opacity: 0; transition: opacity .2s; }
 .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+
+details { margin: .25rem 0; }
+details summary { cursor: pointer; }
+details[open] summary { margin-bottom: .5rem; }
+tr.current td { background: var(--accent-soft); }

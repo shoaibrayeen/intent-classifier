@@ -33,6 +33,19 @@ class ClassifyRequest(BaseModel):
         max_length=60,
         description="Force a retrieval strategy variant instead of the assigned one.",
     )
+    session_id: str | None = Field(
+        default=None,
+        max_length=120,
+        pattern=r"^[A-Za-z0-9_.\-:@]+$",
+        description=(
+            "Conversation id. Turns in the same session inform each other: a short "
+            "follow-up is read against the previous question, and entities named "
+            "earlier carry forward when the new intent accepts them."
+        ),
+    )
+    use_context: bool = Field(
+        default=True, description="Whether earlier turns in the session may influence this one."
+    )
 
     @field_validator("domain", "text", mode="before")
     @classmethod
@@ -96,6 +109,30 @@ class ToolCall(BaseModel):
     ready: bool = True
 
 
+class SessionTurn(BaseModel):
+    """One earlier exchange in a session, as stored and as returned."""
+
+    turn: int
+    text: str
+    intent: str
+    intent_id: str | None = None
+    confidence: float = 0.0
+    entities: dict[str, Any] = Field(default_factory=dict)
+    created_at: float = 0.0
+
+
+class ContextInfo(BaseModel):
+    """What the session contributed to this turn, so a caller can see it."""
+
+    session_id: str
+    turn: int
+    previous_turns: int = 0
+    previous_intent: str | None = None
+    used_for_retrieval: bool = False
+    retrieval_text: str | None = None
+    carried_entities: list[str] = Field(default_factory=list)
+
+
 class StageTimings(BaseModel):
     """Wall-clock milliseconds per pipeline stage."""
 
@@ -132,4 +169,5 @@ class ClassifyResponse(BaseModel):
     top_intents: list[IntentScore] = Field(default_factory=list)
     latency_ms: float = 0.0
     request_id: str | None = None
+    context: ContextInfo | None = None
     debug: ClassifyDebug | None = None

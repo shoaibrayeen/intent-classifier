@@ -11,6 +11,7 @@ from app.observability.audit import AuditLog
 from app.repositories.chroma_domains import ChromaDomainRepository
 from app.repositories.chroma_examples import ChromaExampleRepository
 from app.repositories.chroma_intents import ChromaIntentRepository
+from app.repositories.chroma_sessions import ChromaSessionRepository
 from app.security.auth import Authenticator
 from app.services.classification_service import ClassificationService
 from app.services.classifier import IntentClassifier
@@ -21,6 +22,8 @@ from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
 from app.services.llm.client import LLMClient, OpenAIChatClient, StubLLMClient
 from app.services.llm.entity_extractor import EntityExtractor
+from app.services.llm.mock import MockLLMClient
+from app.services.session_service import SessionService
 from app.services.strategies import StrategySelector
 from app.services.tool_router import ToolRouter
 
@@ -43,6 +46,7 @@ class Container:
     strategies: StrategySelector
     audit: AuditLog
     authenticator: Authenticator
+    sessions: SessionService
 
 
 def build_container(settings: Settings, llm_client: LLMClient | None = None) -> Container:
@@ -60,12 +64,13 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
     classifier = IntentClassifier(settings, embedder, example_repo, intent_repo, index_manager)
 
     if llm_client is None:
-        llm_client = OpenAIChatClient(settings) if settings.openai_api_key else StubLLMClient()
+        llm_client = select_llm_client(settings)
     entity_extractor = EntityExtractor(settings, llm_client)
     tool_router = ToolRouter()
     strategies = StrategySelector(settings)
     audit = AuditLog(settings)
     authenticator = Authenticator(settings)
+    sessions = SessionService(settings, ChromaSessionRepository(store))
 
     classification = ClassificationService(
         settings=settings,
@@ -75,6 +80,7 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
         router=tool_router,
         strategies=strategies,
         audit=audit,
+        sessions=sessions,
     )
 
     return Container(
@@ -92,4 +98,25 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
         strategies=strategies,
         audit=audit,
         authenticator=authenticator,
+        sessions=sessions,
     )
+
+
+def select_llm_client(settings: Settings) -> LLMClient:
+    """Pick the extraction provider from LLM_PROVIDER.
+
+    ``auto`` follows the key: OpenAI when one is set, otherwise nothing. ``mock``
+    is the offline rule-based provider, so the whole flow runs without a key.
+    """
+    provider = settings.llm_provider
+    if provider == "auto":
+        provider = "openai" if settings.openai_api_key else "none"
+    if provider == "mock":
+        logger.warning("LLM_PROVIDER=mock: entity extraction uses offline rules, not a model")
+        return MockLLMClient()
+    if provider == "openai":
+        if not settings.openai_api_key:
+            logger.error("LLM_PROVIDER=openai but OPENAI_API_KEY is empty; extraction disabled")
+            return StubLLMClient()
+        return OpenAIChatClient(settings)
+    return StubLLMClient()

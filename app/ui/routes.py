@@ -8,6 +8,7 @@ in one response.
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -22,7 +23,7 @@ from app.dependencies import (
 )
 from app.errors import InvalidInputError
 from app.models.classification import ClassifyRequest
-from app.models.domain import DomainCreate
+from app.models.domain import DomainCreate, DomainUpdate
 from app.models.example import ExampleCreate
 from app.models.intent import IntentCreate, ToolRef
 from app.observability import tracing
@@ -116,6 +117,9 @@ def playground(
             "strategies": list(BUILTIN_STRATEGIES.values()),
             "extraction_available": container.entity_extractor.available,
             "extraction_enabled": container.entity_extractor.enabled,
+            "provider": container.entity_extractor.provider_name,
+            "sessions_enabled": container.sessions.enabled,
+            "suggested_session": f"play-{uuid.uuid4().hex[:8]}",
         },
     )
 
@@ -147,6 +151,7 @@ def operations(
             "key_count": container.authenticator.key_count,
             "extraction_available": container.entity_extractor.available,
             "extraction_enabled": container.entity_extractor.enabled,
+            "provider": container.entity_extractor.provider_name,
             "tracing_enabled": tracing.enabled(),
             "ab_enabled": container.strategies.enabled,
             "variants": container.strategies.variants,
@@ -182,15 +187,39 @@ def ui_create_domain(
     request: Request,
     name: Annotated[str, Form()],
     description: Annotated[str, Form()] = "",
+    system_instructions: Annotated[str, Form()] = "",
+    user_instructions: Annotated[str, Form()] = "",
     domains: DomainService = Depends(get_domain_service),
 ):
-    domains.create(DomainCreate(name=name, description=description))
+    domains.create(
+        DomainCreate(
+            name=name,
+            description=description,
+            system_instructions=system_instructions,
+            user_instructions=user_instructions,
+        )
+    )
     return _partial(
         request,
         "partials/domain_list.html",
         {"domains": domains.list()},
         _flash(f"Domain '{name}' created."),
     )
+
+
+@router.post("/ui/domains/{domain_id}/instructions", response_class=HTMLResponse)
+def ui_update_instructions(
+    request: Request,
+    domain_id: str,
+    system_instructions: Annotated[str, Form()] = "",
+    user_instructions: Annotated[str, Form()] = "",
+    domains: DomainService = Depends(get_domain_service),
+):
+    domains.update(
+        domain_id,
+        DomainUpdate(system_instructions=system_instructions, user_instructions=user_instructions),
+    )
+    return HTMLResponse(_flash("Extraction instructions saved."))
 
 
 @router.delete("/ui/domains/{domain_id}", response_class=HTMLResponse)
@@ -216,6 +245,7 @@ def ui_create_intent(
     tool_name: Annotated[str, Form()] = "",
     tool_version: Annotated[str, Form()] = "v1",
     entity_schema: Annotated[str, Form()] = "",
+    extraction_hints: Annotated[str, Form()] = "",
     domains: DomainService = Depends(get_domain_service),
     intents: IntentService = Depends(get_intent_service),
 ):
@@ -227,6 +257,7 @@ def ui_create_intent(
             description=description,
             tool=ToolRef(name=tool_name, version=tool_version or "v1"),
             entity_schema=_parse_schema(entity_schema),
+            extraction_hints=extraction_hints,
         ),
     )
     return _partial(
@@ -326,6 +357,7 @@ async def ui_classify(
     text: Annotated[str, Form()],
     extract_entities: Annotated[str, Form()] = "",
     variant: Annotated[str, Form()] = "",
+    session_id: Annotated[str, Form()] = "",
     container: Container = Depends(get_container),
 ):
     payload = ClassifyRequest(
@@ -333,13 +365,23 @@ async def ui_classify(
         text=text,
         extract_entities=True if extract_entities else None,
         variant=variant or None,
+        session_id=session_id.strip() or None,
     )
     result = await container.classification.classify(payload, debug=True)
+    turns = container.sessions.all_turns(payload.session_id) if payload.session_id else []
     return templates.TemplateResponse(
         request=request,
         name="partials/classify_result.html",
-        context={"result": result, "settings": container.settings},
+        context={"result": result, "settings": container.settings, "turns": turns},
     )
+
+
+@router.delete("/ui/playground/session/{session_id}", response_class=HTMLResponse)
+def ui_clear_session(
+    request: Request, session_id: str, container: Container = Depends(get_container)
+):
+    removed = container.sessions.clear(session_id)
+    return HTMLResponse(_flash(f"Session cleared ({removed} turn(s) forgotten)."))
 
 
 def _parse_schema(raw: str) -> dict:

@@ -447,6 +447,71 @@ arguments.</p>
   with empty entities and a status explaining why.
 </div>
 
+<h3>Each domain speaks its own language</h3>
+<p>The extraction prompt is layered: base rules shared by every domain, then the domain's
+<code>system_instructions</code>, then the intent's <code>extraction_hints</code>, all in the
+system turn; the domain's <code>user_instructions</code> and the conversation history precede
+the request in the user turn. A contract domain can state that a counterparty is never our own
+company; an employee domain can state that "me" is the person asking. Neither needs a code
+change.</p>
+
+<h3>An offline provider for the whole flow</h3>
+<p><code>LLM_PROVIDER=mock</code> substitutes a rule-based extractor that reads exactly the
+prompt a model would receive. It is not clever, and that is deliberate: its job is to make
+instructions, history, validation, carry-over and tool routing all execute for real without a
+key, with output stable enough to test against.</p>
+
+<h2>Conversations, not queries</h2>
+
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-label="Multi-turn session flow">
+  <defs>
+    <marker id="d" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </marker>
+  </defs>
+  <g color="var(--muted)">
+  <rect class="box" x="20" y="20" width="220" height="62" rx="9"/>
+  <text class="t-hd" x="38" y="44">turn 1</text>
+  <text class="t-sm" x="38" y="63">"Show me all contracts with Microsoft"</text>
+  <text class="t-sm" x="38" y="77">→ CONTRACT_SEARCH · counterparty: Microsoft</text>
+
+  <path class="arrow" d="M130,82 L130,112" marker-end="url(#d)"/>
+
+  <rect class="box-sparse" x="20" y="114" width="220" height="76" rx="9"/>
+  <text class="t-hd" x="38" y="138">turn 2  "and for Oracle"</text>
+  <text class="t-sm" x="38" y="157">alone: UNKNOWN, nothing to retrieve on</text>
+  <text class="t-sm" x="38" y="172">retried with turn 1 prepended</text>
+  <text class="t-sm" x="38" y="186">→ CONTRACT_SEARCH · counterparty: Oracle</text>
+
+  <path class="arrow" d="M130,190 L130,220" marker-end="url(#d)"/>
+
+  <rect class="box-dense" x="20" y="222" width="220" height="62" rx="9"/>
+  <text class="t-hd" x="38" y="246">turn 3  "which of them expire soon"</text>
+  <text class="t-sm" x="38" y="265">→ CONTRACT_EXPIRY</text>
+  <text class="t-sm" x="38" y="279">counterparty: Oracle ← carried from turn 2</text>
+
+  <rect class="box" x="290" y="20" width="450" height="118" rx="9"/>
+  <text class="t-hd" x="308" y="44">Contextual retrieval is a rescue, not a default</text>
+  <text class="t-sm" x="308" y="66">Only an UNKNOWN turn is retried with the previous question, and</text>
+  <text class="t-sm" x="308" y="81">the contextual result is kept only if it actually resolves.</text>
+  <text class="t-sm" x="308" y="103">Context can save a follow-up. It can never overrule a confident</text>
+  <text class="t-sm" x="308" y="118">answer, and the response says when it was used and with what text.</text>
+
+  <rect class="box" x="290" y="152" width="450" height="132" rx="9"/>
+  <text class="t-hd" x="308" y="176">Entities carry forward only where they fit</text>
+  <text class="t-sm" x="308" y="198">A value named earlier flows into a later intent that declares the</text>
+  <text class="t-sm" x="308" y="213">same entity, unless the new turn names its own. Nothing leaks into</text>
+  <text class="t-sm" x="308" y="228">a tool with no use for it, and the response lists what was carried.</text>
+  <text class="t-sm" x="308" y="250">Turns live in the same Chroma store as the catalogue, in a</text>
+  <text class="t-sm" x="308" y="265">session_turns collection, with a per-session size cap and a TTL.</text>
+  <text class="t-sm" x="308" y="279">One deployment is still one directory.</text>
+  </g>
+</svg>
+<figcaption>Two mechanisms, both visible in the response. Neither runs when the caller omits a
+session id, so single-shot classification is unchanged.</figcaption>
+</figure>
+
 <h2>Running it in production</h2>
 
 <figure>

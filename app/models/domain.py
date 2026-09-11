@@ -13,6 +13,12 @@ class DomainBase(BaseModel):
     name: str = Field(min_length=1, max_length=120, pattern=NAME_PATTERN)
     description: str = Field(default="", max_length=2000)
     status: Status = Status.ACTIVE
+    #: Appended to the extraction system prompt. Where a domain states its
+    #: vocabulary, conventions and what must never be inferred.
+    system_instructions: str = Field(default="", max_length=4000)
+    #: Prepended to the user turn sent to the extractor. Where a domain gives
+    #: examples of how its users phrase things.
+    user_instructions: str = Field(default="", max_length=4000)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -28,6 +34,8 @@ class DomainUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120, pattern=NAME_PATTERN)
     description: str | None = Field(default=None, max_length=2000)
     status: Status | None = None
+    system_instructions: str | None = Field(default=None, max_length=4000)
+    user_instructions: str | None = Field(default=None, max_length=4000)
 
 
 class DomainConfig(DomainBase):

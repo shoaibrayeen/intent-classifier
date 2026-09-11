@@ -24,6 +24,8 @@ class IntentBase(BaseModel):
     tool: ToolRef = Field(default_factory=ToolRef)
     entity_schema: dict[str, Any] = Field(default_factory=dict)
     status: Status = Status.ACTIVE
+    #: Intent-specific guidance for the extractor, on top of the domain's.
+    extraction_hints: str = Field(default="", max_length=2000)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -43,6 +45,7 @@ class IntentUpdate(BaseModel):
     tool: ToolRef | None = None
     entity_schema: dict[str, Any] | None = None
     status: Status | None = None
+    extraction_hints: str | None = Field(default=None, max_length=2000)
 
 
 class IntentConfig(IntentBase):

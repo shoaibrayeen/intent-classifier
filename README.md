@@ -127,9 +127,36 @@ Supported types: `string`, `integer`, `number`, `boolean`, `date`, `enum`,
 `ready: false` with the missing names listed, rather than silently calling a
 tool with a hole in its arguments.
 
-Extraction is off by default. Set `OPENAI_API_KEY`, then either turn it on
-globally with `ENTITY_EXTRACTION_ENABLED=true` or per request with
-`"extract_entities": true`.
+Extraction is off by default. Set `OPENAI_API_KEY` (or `LLM_PROVIDER=mock` to
+run offline), then either turn it on globally with
+`ENTITY_EXTRACTION_ENABLED=true` or per request with `"extract_entities": true`.
+
+### Instructions are per domain
+
+The extraction prompt is assembled in layers, so each domain speaks its own
+language without the code changing:
+
+| Layer | Set where | Goes into |
+|---|---|---|
+| base rules (never invent keys, ISO dates, resolve "it" from history) | code | system prompt |
+| `system_instructions` | the domain | system prompt |
+| `extraction_hints` | the intent | system prompt |
+| `user_instructions` | the domain | user turn, before the request |
+| conversation history | the session | user turn |
+
+A contract domain can say "a counterparty is the other party, never our own
+company"; an employee domain can say "'me' and 'my' are the person asking, not
+an employee name". Both edit from the domain page or the API.
+
+### Running without a key
+
+`LLM_PROVIDER=mock` swaps in an offline, rule-based extractor that reads the
+same prompt a real model would receive and fills the schema by pattern: enum
+values by name, dates and years, identifiers like `C-1042`, and proper nouns
+for strings. It is deliberately simple and deterministic. Its job is to make the
+*whole* flow runnable and testable end to end with no key: instructions,
+history, validation, carry-over and tool routing all execute for real. Health
+reports which provider is live.
 
 ### Tool routing stops before execution
 
@@ -137,6 +164,39 @@ The response says what should be called and with which arguments. It never calls
 it. Execution belongs to the caller, who owns the credentials, the retry policy
 and the blast radius. A classifier that also invokes tools cannot be safely
 shared by a UI, an API and an agent at once.
+
+## Multi-turn sessions
+
+People do not ask one question. Pass a `session_id` on classify and turns in the
+same session inform each other in two deliberate, inspectable ways:
+
+```
+turn 1  "Show me all contracts with Microsoft"   -> CONTRACT_SEARCH  {counterparty: Microsoft}
+turn 2  "and for Oracle"                         -> alone: UNKNOWN
+                                                    with context: CONTRACT_SEARCH {counterparty: Oracle}
+turn 3  "which of them expire next month"        -> CONTRACT_EXPIRY {counterparty: Microsoft ← carried}
+```
+
+**Contextual retrieval.** A follow-up like "and for Oracle" has nothing to
+retrieve on. If a turn comes back `UNKNOWN` and the session has a previous turn,
+it is retried as the previous question plus the new one. The contextual result
+is kept only if it actually resolves, so context can rescue a follow-up but can
+never overrule a confident answer. The response says when this happened and what
+text was used.
+
+**Entity carry-over.** Values named earlier flow into a later intent that
+declares the same entity, unless the new turn names its own. Only entities the
+*new* intent accepts are eligible, so nothing leaks into a tool that has no use
+for it. The response lists what was carried.
+
+The extractor also sees the last few turns as `conversation_history`, so a real
+model can resolve "it" and "they" itself.
+
+Sessions live in the same Chroma store as everything else, in a `session_turns`
+collection: one deployment is still one directory. Per-session size and a TTL
+are enforced on write. `GET /api/v1/sessions/{id}` shows a conversation;
+`DELETE` forgets it. `"use_context": false` treats a single turn as standalone
+while still recording it. Sessions are isolated by id and by domain.
 
 ## Security
 
@@ -291,6 +351,7 @@ Base path `/api/v1`.
 | `POST` `GET` | `/domains/{domainId}/intents/{intentId}/examples` | add, list |
 | `POST` | `.../examples/bulk` | add many in one embedding pass |
 | `DELETE` | `.../examples/{exampleId}` | remove one |
+| `GET` `DELETE` | `/sessions/{sessionId}` | inspect or forget a conversation |
 | `POST` | `/domains/{domainId}/reindex` | force a BM25 rebuild |
 | `GET` | `/domains/{domainId}/index/status` | index state, version, document counts |
 
@@ -337,6 +398,7 @@ ChromaDB is the system of record. Three collections:
 | `domains` | domain configuration as JSON documents |
 | `intents` | intent configuration, tool mapping, entity schema |
 | `intent_examples` | example text plus its 384-dimensional embedding |
+| `session_turns` | conversation turns: text, intent, entities, per session and domain |
 
 Uniqueness, cascading deletes and index invalidation are enforced in the service
 layer, since Chroma has no constraints. All access runs through one client under
@@ -362,7 +424,13 @@ Every value has a working default in `.env`.
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `LLM_PROVIDER` | `auto` | `auto`, `openai`, `mock` (offline), `none` |
 | `OPENAI_API_KEY` | *(empty)* | only needed for entity extraction |
+| `SESSIONS_ENABLED` | `true` | multi-turn memory |
+| `SESSION_HISTORY_TURNS` | `5` | turns shown to the extractor |
+| `SESSION_MAX_TURNS` / `SESSION_TTL_SECONDS` | `50` / `604800` | per-session size and age limits |
+| `CONTEXT_RETRIEVAL_ENABLED` | `true` | retry an UNKNOWN follow-up with the previous question |
+| `ENTITY_CARRY_OVER_ENABLED` | `true` | carry earlier entities into a new intent |
 | `LLM_TIMEOUT_SECONDS` | `10` | extraction gives up after this |
 | `AUTH_ENABLED` / `API_KEYS` | `false` / *(empty)* | API key authentication |
 | `AB_TESTING_ENABLED` / `AB_VARIANTS` | `false` / `hybrid_rrf,dense_only` | strategy assignment |

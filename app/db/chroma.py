@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 DOMAINS_COLLECTION = "domains"
 INTENTS_COLLECTION = "intents"
 EXAMPLES_COLLECTION = "intent_examples"
+SESSIONS_COLLECTION = "session_turns"
 
 #: Config collections hold no vectors, but Chroma requires an embedding on every
 #: add when the collection has no embedding function. A constant 1-d vector is
@@ -59,6 +60,11 @@ class ChromaStore:
             configuration={"hnsw": {"space": "cosine"}},
             embedding_function=None,
         )
+        # Conversation turns live in the same store as everything else, so a
+        # single directory (or a single volume) is the whole deployment.
+        self.sessions: Collection = self.client.get_or_create_collection(
+            SESSIONS_COLLECTION, embedding_function=None
+        )
 
     def heartbeat(self) -> bool:
         try:
@@ -71,7 +77,7 @@ class ChromaStore:
     def reset_all(self) -> None:
         """Drop every record. Used by the seed script's --reset and by tests."""
         with self.lock:
-            for collection in (self.examples, self.intents, self.domains):
+            for collection in (self.sessions, self.examples, self.intents, self.domains):
                 ids = collection.get(include=[])["ids"]
                 if ids:
                     collection.delete(ids=ids)
