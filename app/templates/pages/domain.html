@@ -28,20 +28,9 @@
 
 <section class="card">
   <h2>Extraction instructions</h2>
-  <p class="muted small">
-    Layered onto the shared extraction prompt for every intent in this domain. System instructions
-    state vocabulary and what must never be inferred; user instructions describe how people here
-    phrase requests.
-  </p>
-  <form hx-post="/ui/domains/{{ domain.id }}/instructions" hx-swap="none">
-    <label>System instructions
-      <textarea name="system_instructions" rows="4" maxlength="4000">{{ domain.system_instructions }}</textarea>
-    </label>
-    <label>User instructions
-      <textarea name="user_instructions" rows="3" maxlength="4000">{{ domain.user_instructions }}</textarea>
-    </label>
-    <button type="submit">Save instructions</button>
-  </form>
+  <div id="instructions-editor">
+    {% include "partials/instructions_form.html" %}
+  </div>
 </section>
 
 <section class="card">

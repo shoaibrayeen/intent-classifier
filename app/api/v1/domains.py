@@ -3,27 +3,138 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
+from starlette.concurrency import run_in_threadpool
 
 from app.dependencies import authorize_domain, get_domain_service, require_read, require_write
-from app.models.domain import DomainConfig, DomainCreate, DomainRead, DomainUpdate
+from app.errors import InvalidInputError, UnavailableError
+from app.models.domain import (
+    DomainConfig,
+    DomainCreate,
+    DomainRead,
+    DomainUpdate,
+    InstructionGenerateRequest,
+    InstructionGenerateResponse,
+)
 from app.security.auth import Principal
 from app.services.domain_service import DomainService
+from app.services.llm.instruction_generator import brief_for
 
 router = APIRouter(prefix="/domains", tags=["domains"])
 
 
 @router.post("", response_model=DomainConfig, status_code=status.HTTP_201_CREATED)
-def create_domain(
+async def create_domain(
     payload: DomainCreate,
     request: Request,
     principal: Principal = Depends(require_write),
     service: DomainService = Depends(get_domain_service),
 ) -> DomainConfig:
-    domain = service.create(payload)
-    request.app.state.container.audit.record(
-        action="domain.create", resource=f"domain:{domain.name}"
+    """Create a domain.
+
+    With ``generate_instructions: true`` the extraction instructions are
+    drafted from the name and description by the configured LLM provider and
+    saved with the domain. Explicit instructions in the payload win over
+    generation. Requires a provider (``OPENAI_API_KEY`` or ``LLM_PROVIDER=mock``).
+    """
+    container = request.app.state.container
+    generator = container.instruction_generator
+
+    wants_generation = payload.generate_instructions and not (
+        payload.system_instructions.strip() or payload.user_instructions.strip()
+    )
+    if wants_generation and not generator.available:
+        # Checked before anything is written, so a config problem cannot leave
+        # a half-configured domain behind.
+        raise UnavailableError(
+            "generate_instructions was requested but no LLM provider is configured; "
+            "set OPENAI_API_KEY (or LLM_PROVIDER=mock), or create the domain without it"
+        )
+
+    domain = await run_in_threadpool(service.create, payload)
+    generation_status = None
+    if wants_generation:
+        result = await generator.generate(domain.name, brief_for(domain))
+        generation_status = result.status
+        if result.status == "ok":
+            domain = await run_in_threadpool(
+                service.update,
+                domain.id,
+                DomainUpdate(
+                    system_instructions=result.system_instructions,
+                    user_instructions=result.user_instructions,
+                ),
+            )
+        # A provider failure never destroys the creation: the domain exists,
+        # instructions stay empty, and the caller can see both in the response.
+
+    container.audit.record(
+        action="domain.create",
+        resource=f"domain:{domain.name}",
+        instructions_generated=generation_status,
     )
     return domain
+
+
+@router.post(
+    "/{domain_id}/instructions/generate",
+    response_model=InstructionGenerateResponse,
+)
+async def generate_instructions(
+    domain_id: str,
+    request: Request,
+    payload: InstructionGenerateRequest | None = None,
+    principal: Principal = Depends(require_write),
+    service: DomainService = Depends(get_domain_service),
+) -> InstructionGenerateResponse:
+    """Draft this domain's extraction instructions from its name and description.
+
+    The draft is saved immediately and returned for review; edit it with
+    ``PUT /domains/{domainId}`` or on the domain page. ``brief`` overrides the
+    stored description as the generator's input.
+    """
+    domain = service.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
+    container = request.app.state.container
+    generator = container.instruction_generator
+
+    if not generator.available:
+        raise UnavailableError(
+            "no LLM provider is configured; set OPENAI_API_KEY or LLM_PROVIDER=mock"
+        )
+    brief = brief_for(domain, payload.brief if payload else None)
+    if not brief:
+        raise InvalidInputError(
+            "this domain has no description; provide a 'brief' describing what "
+            "users do in this domain"
+        )
+
+    result = await generator.generate(domain.name, brief)
+    saved = False
+    if result.status == "ok":
+        await run_in_threadpool(
+            service.update,
+            domain_id,
+            DomainUpdate(
+                system_instructions=result.system_instructions,
+                user_instructions=result.user_instructions,
+            ),
+        )
+        saved = True
+
+    container.audit.record(
+        action="domain.instructions.generate",
+        resource=f"domain:{domain.name}",
+        outcome=result.status,
+    )
+    return InstructionGenerateResponse(
+        domain_id=domain_id,
+        status=result.status,
+        detail=result.detail,
+        provider=result.provider,
+        system_instructions=result.system_instructions,
+        user_instructions=result.user_instructions,
+        saved=saved,
+    )
 
 
 @router.get("", response_model=list[DomainRead])

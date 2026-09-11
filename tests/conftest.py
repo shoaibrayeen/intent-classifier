@@ -18,6 +18,28 @@ from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
+def pytest_sessionfinish(session, exitstatus):
+    """Stop Chroma's shared native systems before the interpreter tears down.
+
+    chromadb 1.5.x on macOS ARM64 can abort with 'recursive_mutex lock failed'
+    when its Rust runtime is destroyed by interpreter exit in an arbitrary
+    order. Stopping the cached systems explicitly makes shutdown ordered. The
+    crash happened after all tests had passed, but an aborting process still
+    fails CI.
+    """
+    try:
+        from chromadb.api.shared_system_client import SharedSystemClient
+
+        for system in list(SharedSystemClient._identifier_to_system.values()):
+            try:
+                system.stop()
+            except Exception:
+                pass
+        SharedSystemClient.clear_system_cache()
+    except Exception:
+        pass
+
+
 def make_settings(**overrides) -> Settings:
     """Test defaults: in-memory store, no auth, no audit file, no LLM."""
     base = {

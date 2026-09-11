@@ -26,8 +26,13 @@
   <form hx-post="/ui/domains" hx-target="#domain-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
     <label>Name<input name="name" required placeholder="contract" maxlength="120"></label>
     <label>Description<input name="description" placeholder="Contract and agreement operations" maxlength="2000"></label>
+    <label class="inline">
+      <input type="checkbox" name="generate_instructions" value="1" {% if not generator_available %}disabled{% endif %}>
+      Draft extraction instructions with the LLM ({{ provider }})
+      {% if not generator_available %}<span class="muted small">(no provider configured)</span>{% endif %}
+    </label>
     <details>
-      <summary class="muted small">Extraction instructions (optional)</summary>
+      <summary class="muted small">Or write extraction instructions yourself (wins over generation)</summary>
       <label>System instructions
         <textarea name="system_instructions" rows="3" maxlength="4000"
           placeholder="Vocabulary, conventions, what must never be inferred. Appended to the extractor's system prompt."></textarea>

@@ -57,9 +57,19 @@ def _partial(request: Request, name: str, context: dict, flash: str | None = Non
 
 # --------------------------------------------------------------------- pages
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, domains: DomainService = Depends(get_domain_service)):
+def dashboard(
+    request: Request,
+    domains: DomainService = Depends(get_domain_service),
+    container: Container = Depends(get_container),
+):
     return templates.TemplateResponse(
-        request=request, name="pages/dashboard.html", context={"domains": domains.list()}
+        request=request,
+        name="pages/dashboard.html",
+        context={
+            "domains": domains.list(),
+            "generator_available": container.instruction_generator.available,
+            "provider": container.instruction_generator.provider_name,
+        },
     )
 
 
@@ -72,6 +82,7 @@ def domain_page(
     indexes: IndexManager = Depends(get_index_manager),
 ):
     domain = domains.read(domain_id)
+    container = request.app.state.container
     return templates.TemplateResponse(
         request=request,
         name="pages/domain.html",
@@ -79,6 +90,8 @@ def domain_page(
             "domain": domain,
             "intents": intents.list(domain_id),
             "status": indexes.status(domain_id),
+            "generator_available": container.instruction_generator.available,
+            "provider": container.instruction_generator.provider_name,
         },
     )
 
@@ -212,15 +225,17 @@ async def ui_run_evaluation(
 
 # ----------------------------------------------------------------- mutations
 @router.post("/ui/domains", response_class=HTMLResponse)
-def ui_create_domain(
+async def ui_create_domain(
     request: Request,
     name: Annotated[str, Form()],
     description: Annotated[str, Form()] = "",
     system_instructions: Annotated[str, Form()] = "",
     user_instructions: Annotated[str, Form()] = "",
+    generate_instructions: Annotated[str, Form()] = "",
     domains: DomainService = Depends(get_domain_service),
+    container: Container = Depends(get_container),
 ):
-    domains.create(
+    domain = domains.create(
         DomainCreate(
             name=name,
             description=description,
@@ -228,11 +243,28 @@ def ui_create_domain(
             user_instructions=user_instructions,
         )
     )
+    message = f"Domain '{name}' created."
+    if generate_instructions and not (system_instructions.strip() or user_instructions.strip()):
+        result = await container.instruction_generator.generate(domain.name, domain.description)
+        if result.status == "ok":
+            domains.update(
+                domain.id,
+                DomainUpdate(
+                    system_instructions=result.system_instructions,
+                    user_instructions=result.user_instructions,
+                ),
+            )
+            message = f"Domain '{name}' created; extraction instructions drafted and saved."
+        else:
+            message = (
+                f"Domain '{name}' created, but instruction generation "
+                f"{result.status}: {result.detail}"
+            )
     return _partial(
         request,
         "partials/domain_list.html",
         {"domains": domains.list()},
-        _flash(f"Domain '{name}' created."),
+        _flash(message),
     )
 
 
@@ -249,6 +281,48 @@ def ui_update_instructions(
         DomainUpdate(system_instructions=system_instructions, user_instructions=user_instructions),
     )
     return HTMLResponse(_flash("Extraction instructions saved."))
+
+
+@router.post("/ui/domains/{domain_id}/instructions/generate", response_class=HTMLResponse)
+async def ui_generate_instructions(
+    request: Request,
+    domain_id: str,
+    brief: Annotated[str, Form()] = "",
+    domains: DomainService = Depends(get_domain_service),
+    container: Container = Depends(get_container),
+):
+    """Draft, save, and re-render the editor with the draft loaded for refining."""
+    domain = domains.get(domain_id)
+    generator = container.instruction_generator
+    if not generator.available:
+        return HTMLResponse(
+            _flash("No LLM provider configured. Set OPENAI_API_KEY or LLM_PROVIDER=mock.", "error")
+        )
+    effective_brief = brief.strip() or domain.description.strip()
+    if not effective_brief:
+        return HTMLResponse(
+            _flash("Give the generator a brief (or set a domain description) first.", "error")
+        )
+    result = await generator.generate(domain.name, effective_brief)
+    if result.status != "ok":
+        return HTMLResponse(_flash(f"Generation {result.status}: {result.detail}", "error"))
+    updated = domains.update(
+        domain_id,
+        DomainUpdate(
+            system_instructions=result.system_instructions,
+            user_instructions=result.user_instructions,
+        ),
+    )
+    return _partial(
+        request,
+        "partials/instructions_form.html",
+        {
+            "domain": updated,
+            "generator_available": generator.available,
+            "provider": generator.provider_name,
+        },
+        _flash("Instructions drafted and saved. Refine them below if needed."),
+    )
 
 
 @router.delete("/ui/domains/{domain_id}", response_class=HTMLResponse)

@@ -29,7 +29,8 @@ class DomainService:
         with self._store.lock:
             if self._domains.get_by_name(payload.name) is not None:
                 raise ConflictError(f"domain '{payload.name}' already exists")
-            domain = DomainConfig(**payload.model_dump())
+            # generate_instructions is a request flag, not domain state.
+            domain = DomainConfig(**payload.model_dump(exclude={"generate_instructions"}))
             return self._domains.save(domain)
 
     def get(self, domain_id: str) -> DomainConfig:

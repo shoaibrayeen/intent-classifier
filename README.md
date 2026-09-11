@@ -133,6 +133,34 @@ Extraction is off by default. Set `OPENAI_API_KEY` (or `LLM_PROVIDER=mock` to
 run offline), then either turn it on globally with
 `ENTITY_EXTRACTION_ENABLED=true` or per request with `"extract_entities": true`.
 
+### Instructions can be drafted for you
+
+An administrator knows their domain, not prompt engineering. Give a domain a
+name and a one-line description, and the service drafts both instruction blocks
+with the configured LLM provider and saves them:
+
+```bash
+curl -X POST localhost:8000/api/v1/domains \
+  -H 'content-type: application/json' \
+  -d '{"name": "contract",
+       "description": "tracking vendor agreements, renewals and obligations",
+       "generate_instructions": true}'
+```
+
+Or regenerate later, optionally steering with a different brief:
+
+```bash
+curl -X POST localhost:8000/api/v1/domains/$DOMAIN/instructions/generate \
+  -d '{"brief": "comparing procurement deals across regions"}' \
+  -H 'content-type: application/json'
+```
+
+The draft is saved to the domain and returned for review. The domain page has
+the same flow: a generate button fills the editor, and the admin refines and
+saves by hand. Explicit instructions always win over generation, a missing
+provider fails before anything is created, and a provider outage never destroys
+a created domain. `LLM_PROVIDER=mock` drafts deterministic templates offline.
+
 ### Instructions are per domain
 
 The extraction prompt is assembled in layers, so each domain speaks its own
@@ -539,6 +567,13 @@ Export first if the catalogue matters.
 
 **Never run more than one worker.** Embedded Chroma is single-writer, and
 concurrent writers can corrupt the on-disk store.
+
+**Why chromadb is pinned to 1.5.2.** Versions 1.5.4 through at least 1.5.9
+intermittently abort with `recursive_mutex lock failed` at process exit on
+macOS ARM64 (upstream chroma-core/chroma#6852). 1.5.2 ran a six-for-six clean
+stress of the full suite here and reads stores written by 1.5.9. Re-pin upward
+once the upstream fix lands, and rerun the suite several times before trusting
+it.
 
 ## Stack
 

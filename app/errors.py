@@ -27,3 +27,10 @@ class ConflictError(AppError):
 class InvalidInputError(AppError):
     status_code = 400
     code = "invalid_input"
+
+
+class UnavailableError(AppError):
+    """A dependency this operation needs is not configured or not reachable."""
+
+    status_code = 503
+    code = "unavailable"

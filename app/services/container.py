@@ -22,6 +22,7 @@ from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
 from app.services.llm.client import LLMClient, OpenAIChatClient, StubLLMClient
 from app.services.llm.entity_extractor import EntityExtractor
+from app.services.llm.instruction_generator import InstructionGenerator
 from app.services.llm.mock import MockLLMClient
 from app.services.session_service import SessionService
 from app.services.strategies import StrategySelector
@@ -42,6 +43,7 @@ class Container:
     classification: ClassificationService
     index_manager: IndexManager
     entity_extractor: EntityExtractor
+    instruction_generator: InstructionGenerator
     tool_router: ToolRouter
     strategies: StrategySelector
     audit: AuditLog
@@ -66,6 +68,7 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
     if llm_client is None:
         llm_client = select_llm_client(settings)
     entity_extractor = EntityExtractor(settings, llm_client)
+    instruction_generator = InstructionGenerator(llm_client)
     tool_router = ToolRouter()
     strategies = StrategySelector(settings)
     audit = AuditLog(settings)
@@ -94,6 +97,7 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
         classification=classification,
         index_manager=index_manager,
         entity_extractor=entity_extractor,
+        instruction_generator=instruction_generator,
         tool_router=tool_router,
         strategies=strategies,
         audit=audit,

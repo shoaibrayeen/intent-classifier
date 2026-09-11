@@ -1,0 +1,30 @@
+<p class="muted small">
+  Layered onto the shared extraction prompt for every intent in this domain. System instructions
+  state vocabulary and what must never be inferred; user instructions describe how people here
+  phrase requests.
+</p>
+<form hx-post="/ui/domains/{{ domain.id }}/instructions" hx-swap="none">
+  <label>System instructions
+    <textarea name="system_instructions" rows="4" maxlength="4000">{{ domain.system_instructions }}</textarea>
+  </label>
+  <label>User instructions
+    <textarea name="user_instructions" rows="3" maxlength="4000">{{ domain.user_instructions }}</textarea>
+  </label>
+  <div class="row">
+    <button type="submit">Save instructions</button>
+  </div>
+</form>
+<form hx-post="/ui/domains/{{ domain.id }}/instructions/generate"
+      hx-target="#instructions-editor" hx-swap="innerHTML" hx-indicator="#gen-busy">
+  <label>Brief for the generator <span class="muted small">(defaults to the domain description)</span>
+    <input name="brief" maxlength="2000" placeholder="{{ domain.description or 'what do users do in this domain?' }}">
+  </label>
+  <button type="submit" {% if not generator_available %}disabled{% endif %}>
+    Generate with LLM ({{ provider }}) <span id="gen-busy" class="htmx-indicator">…</span>
+  </button>
+  {% if not generator_available %}
+  <p class="muted small">Needs a provider: set OPENAI_API_KEY, or LLM_PROVIDER=mock to draft offline.</p>
+  {% else %}
+  <p class="muted small">Drafts both blocks from the name and brief, saves them, and fills the editor above for refinement.</p>
+  {% endif %}
+</form>

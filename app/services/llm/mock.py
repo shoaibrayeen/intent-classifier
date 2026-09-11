@@ -119,6 +119,10 @@ class MockLLMClient:
             payload = json.loads(user)
         except json.JSONDecodeError:
             return {}
+        if payload.get("task") == "generate_domain_instructions":
+            return generate_instructions_by_rule(
+                str(payload.get("domain_name", "")), str(payload.get("description", ""))
+            )
         text = str(payload.get("request", ""))
         schema = payload.get("entity_schema") or {}
         today = payload.get("today")
@@ -212,3 +216,28 @@ def _proper_nouns(text: str, exclude: list[str]) -> list[str]:
             continue
         found.append(candidate)
     return found
+
+
+def generate_instructions_by_rule(name: str, description: str) -> dict[str, str]:
+    """Deterministic instruction drafts, so the flow runs offline.
+
+    Templated on purpose: the mock's job is to exercise the pipeline, and a
+    predictable draft is exactly what the admin then edits on the domain page.
+    """
+    name = name.strip() or "this"
+    about = description.strip().rstrip(".")
+    focus = about if about else f"{name} operations"
+    return {
+        "system_instructions": (
+            f"You extract entities for the {name} domain, which covers {focus}. "
+            f"Interpret every request in that context and use only the "
+            f"terminology the request itself contains. Never infer a value that "
+            f"is not stated; when an entity is not mentioned, leave it out "
+            f"rather than guessing."
+        ),
+        "user_instructions": (
+            f"Users are working with {focus}. They phrase requests informally, "
+            f"name things by their common business terms, and often refer back "
+            f"to items from earlier in the conversation."
+        ),
+    }

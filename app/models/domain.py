@@ -27,7 +27,30 @@ class DomainBase(BaseModel):
 
 
 class DomainCreate(DomainBase):
-    pass
+    #: Draft system/user instructions from the name and description with the
+    #: configured LLM provider at creation time. Explicitly supplied
+    #: instructions always win over generated ones.
+    generate_instructions: bool = False
+
+
+class InstructionGenerateRequest(BaseModel):
+    """Regenerate a domain's extraction instructions.
+
+    ``brief`` overrides the stored description as the input; useful when the
+    description is empty or the admin wants to steer the draft.
+    """
+
+    brief: str | None = Field(default=None, max_length=2000)
+
+
+class InstructionGenerateResponse(BaseModel):
+    domain_id: str
+    status: str
+    detail: str | None = None
+    provider: str = ""
+    system_instructions: str = ""
+    user_instructions: str = ""
+    saved: bool = False
 
 
 class DomainUpdate(BaseModel):
