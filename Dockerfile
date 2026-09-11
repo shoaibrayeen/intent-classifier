@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY app ./app
 COPY scripts ./scripts
+# Generated API reference, served at /ui/api.
+COPY api-documentation.html ./api-documentation.html
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 

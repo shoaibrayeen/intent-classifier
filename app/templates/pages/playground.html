@@ -2,7 +2,11 @@
 {% block title %}Playground · Intent Classifier{% endblock %}
 {% block content %}
 <h1>Playground</h1>
-<p class="muted">Classify a query against one domain and inspect every stage of the retrieval pipeline.</p>
+<p class="muted">
+  Classify a query against one domain and inspect every stage of the retrieval pipeline.
+  Keep the session id across turns to see a conversation build up.
+  <a href="/ui/api">API reference</a> · <a href="/docs">Swagger</a>
+</p>
 
 <section class="card">
   <form hx-post="/ui/playground/classify" hx-target="#classify-result" hx-swap="innerHTML"

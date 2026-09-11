@@ -27,6 +27,26 @@ _ID_LIKE = re.compile(r"\b([A-Z]{1,4}-\d{2,})\b")
 
 # Words that are capitalised for reasons other than being a name.
 _SKIP = {
+    "now",
+    "then",
+    "also",
+    "next",
+    "ok",
+    "okay",
+    "but",
+    "so",
+    "well",
+    "great",
+    "thanks",
+    "hi",
+    "hello",
+    "hey",
+    "yes",
+    "no",
+    "again",
+    "instead",
+    "same",
+    "only",
     "i",
     "show",
     "find",
@@ -75,6 +95,7 @@ _SKIP = {
     "dr",
     "msa",
     "sow",
+    *MONTHS.split("|"),
 }
 _TRUE_WORDS = {"yes", "true", "active", "enabled", "renew", "renewal", "renewed"}
 _FALSE_WORDS = {"no", "false", "inactive", "disabled", "expired", "cancelled", "canceled"}

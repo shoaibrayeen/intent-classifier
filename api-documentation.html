@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intent Classifier — API reference</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#faf9f7; --panel:#fff; --ink:#1a1917; --muted:#6b6a66; --line:#e3e1dc;
+  --accent:#2f6f4f; --accent-soft:#e8f1eb; --warn:#8a6d1f;
+  --get:#2f6f4f; --post:#2f5f8a; --put:#8a6d1f; --delete:#9c2f2f;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16171a; --panel:#1e2023; --ink:#eceae6; --muted:#9b9a95; --line:#32343a;
+    --accent:#6fbf94; --accent-soft:#223029; --warn:#d6b45c;
+    --get:#6fbf94; --post:#7fb0dd; --put:#d6b45c; --delete:#e0806f; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width:920px; margin:0 auto; padding:3rem 1.5rem 5rem; }
+header { border-bottom:1px solid var(--line); padding-bottom:1.5rem; margin-bottom:1.5rem; }
+h1 { font-size:2rem; margin:0 0 .4rem; letter-spacing:-.025em; }
+h2 { font-size:1.3rem; margin:3rem 0 .75rem; padding-top:1.5rem;
+  border-top:1px solid var(--line); letter-spacing:-.015em; }
+h3 { font-size:1.05rem; margin:2rem 0 .5rem; }
+p { margin:.85rem 0; }
+.lede { font-size:1.1rem; color:var(--muted); margin:0; }
+.muted { color:var(--muted); } .small { font-size:.85rem; }
+a { color:var(--accent); }
+code, .mono { font-family:var(--mono); font-size:.88em; }
+code { background:var(--accent-soft); padding:.1em .35em; border-radius:4px; }
+pre { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:1rem 1.1rem; overflow-x:auto; font-family:var(--mono); font-size:13px;
+  line-height:1.5; margin:1rem 0; }
+pre code { background:none; padding:0; }
+table { width:100%; border-collapse:collapse; font-size:14px; margin:1rem 0; }
+th,td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--line);
+  vertical-align:top; }
+th { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+tbody tr:last-child td { border-bottom:none; }
+.links { margin-top:1rem; display:flex; gap:1rem; flex-wrap:wrap; }
+.links a { font-size:14px; padding:.25rem .7rem; border:1px solid var(--line);
+  border-radius:999px; text-decoration:none; }
+.toc { display:flex; gap:1rem; flex-wrap:wrap; font-size:14px;
+  padding:.75rem 0; border-bottom:1px solid var(--line); }
+.toc a { text-decoration:none; }
+.endpoint, .model { background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:.9rem 1.1rem; margin:.85rem 0; }
+.endpoint .sig { margin:0 0 .4rem; }
+.method { font-family:var(--mono); font-size:12px; font-weight:700;
+  padding:.1rem .45rem; border-radius:5px; border:1px solid currentColor; }
+.method.get{color:var(--get);} .method.post{color:var(--post);}
+.method.put{color:var(--put);} .method.delete{color:var(--delete);}
+.note { border-left:3px solid var(--accent); background:var(--accent-soft);
+  padding:.85rem 1.1rem; border-radius:0 8px 8px 0; margin:1.5rem 0; }
+ul { padding-left:1.25rem; } li { margin:.35rem 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Intent Classifier API</h1>
+  <p class="lede">Map free-form language to configured business intents, extract the entities
+  that intent declares, and report the tool it maps to.</p>
+  <p class="small muted">Version 0.1.0 · generated from the live OpenAPI schema by
+  <span class="mono">scripts/build_api_docs.py</span></p>
+  <nav class="links">
+    <a href="/docs">Swagger UI</a>
+    <a href="/redoc">ReDoc</a>
+    <a href="/openapi.json">openapi.json</a>
+    <a href="/ui/playground">Playground</a>
+  </nav>
+</header>
+
+<nav class="toc">
+  <a href="#start">Start here</a>
+  <a href="#conversations">Conversations</a>
+  <a href="#entities">Entities and tools</a>
+  <a href="#errors">Errors</a>
+  <a href="#auth">Authentication</a>
+  <a href="#endpoints">Endpoints</a>
+  <a href="#models">Models</a>
+</nav>
+
+
+<h2 id="start">Start here</h2>
+<p>One endpoint does the work. Everything else configures it or explains it.</p>
+
+<pre><code>curl -X POST http://localhost:8000/api/v1/classify \
+  -H 'content-type: application/json' \
+  -d '{"domain": "contract", "text": "Show me all active contracts with Microsoft"}'</code></pre>
+
+<pre><code>{
+  "domain": "contract",
+  "intent": "CONTRACT_SEARCH",
+  "confidence": 0.88,
+  "entities": { "counterparty": "Microsoft", "status": "ACTIVE" },
+  "tool": {
+    "name": "search_contracts",
+    "version": "v1",
+    "arguments": { "counterparty": "Microsoft", "status": "ACTIVE" },
+    "missing_required": [],
+    "ready": true
+  },
+  "reason": null,
+  "top_intents": [ ... ],
+  "latency_ms": 11.0,
+  "request_id": "5f3c..."
+}</code></pre>
+
+<div class="note">
+  <strong>Read <code>intent</code> together with <code>reason</code>.</strong>
+  When nothing matches well enough the intent is <code>UNKNOWN</code> and
+  <code>reason</code> says which rule fired: <code>low_confidence</code>,
+  <code>low_similarity</code> or <code>no_examples</code>. That is a real answer,
+  not an error. For an agent, a confident wrong intent invokes the wrong tool.
+</div>
+
+<h2 id="conversations">Conversations</h2>
+<p>Pass a <code>session_id</code> and turns inform each other. The same id across calls is one
+conversation; a different id is a different one. Sessions are also scoped per domain.</p>
+
+<pre><code>POST /api/v1/classify  {"domain":"contract","text":"Show me all active contracts with Microsoft","session_id":"s-1"}
+  -> CONTRACT_SEARCH   entities {counterparty: Microsoft, status: ACTIVE}
+
+POST /api/v1/classify  {"domain":"contract","text":"and for Oracle","session_id":"s-1"}
+  -> CONTRACT_SEARCH   entities {counterparty: Oracle, status: ACTIVE}
+     context.used_for_retrieval = true
+     context.retrieval_text = "Show me all active contracts with Microsoft and for Oracle"
+     context.carried_entities = ["status"]</code></pre>
+
+<p>Two mechanisms, both reported in <code>context</code> so nothing is hidden:</p>
+<ul>
+  <li><strong>Contextual retrieval.</strong> A turn that comes back <code>UNKNOWN</code> is
+  retried as the previous question plus the new one, and the contextual result is kept only if
+  it resolves. Context can rescue a follow-up; it can never overrule a confident answer.</li>
+  <li><strong>Entity carry-over.</strong> A value named earlier fills an entity the new turn did
+  not mention, but only where the new intent declares that entity.</li>
+</ul>
+<p>Send <code>"use_context": false</code> to treat one turn as standalone while still recording
+it. <code>GET /api/v1/sessions/{id}</code> shows a conversation, <code>DELETE</code> forgets it.</p>
+
+<h2 id="entities">Entities and tools</h2>
+<p>Extraction runs only after a confident match, never for <code>UNKNOWN</code>, and is the only
+place this service calls a language model. Whatever the model returns is treated as untrusted
+input: values are coerced to the type the intent declared, enums are normalised to the declared
+spelling, dates become ISO 8601, and <strong>any key the intent did not declare is dropped</strong>.
+Rejections are listed in <code>entity_extraction.rejected</code>.</p>
+
+<p>A required entity that was not found leaves the tool call <code>ready: false</code> with the
+missing names listed, rather than calling a tool with a hole in its arguments. The service
+reports the call and never performs it.</p>
+
+<p>Turn extraction on globally with <code>ENTITY_EXTRACTION_ENABLED=true</code>, or per request
+with <code>"extract_entities": true</code>. Set <code>LLM_PROVIDER=mock</code> to run the whole
+flow offline with a rule-based extractor and no API key.</p>
+
+<h2 id="errors">Errors</h2>
+<p>Failures return a single shape, carrying the request id so a report can be traced:</p>
+<pre><code>{"error": {"code": "not_found", "message": "domain 'ghost' not found", "request_id": "5f3c..."}}</code></pre>
+<table>
+  <thead><tr><th>Status</th><th>Code</th><th>When</th></tr></thead>
+  <tbody>
+    <tr><td>400</td><td class="mono">invalid_input</td><td>malformed input the schema cannot reject, such as an entity schema that is not JSON</td></tr>
+    <tr><td>401</td><td class="mono">unauthenticated</td><td>authentication is on and the key is missing or wrong</td></tr>
+    <tr><td>403</td><td class="mono">forbidden</td><td>the key lacks the scope, or the domain is outside its allowlist</td></tr>
+    <tr><td>404</td><td class="mono">not_found</td><td>no such domain, intent, example or session</td></tr>
+    <tr><td>409</td><td class="mono">conflict</td><td>duplicate domain name, intent name within a domain, or example text within an intent</td></tr>
+    <tr><td>422</td><td class="mono">-</td><td>request body failed validation (FastAPI's own shape)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="auth">Authentication</h2>
+<p>Off by default. Enable with <code>AUTH_ENABLED=true</code> and define keys as
+<code>secret:domains:scopes</code>, comma separated:</p>
+<pre><code>API_KEYS=ops-key:*:admin, contract-svc:contract|legal:classify, dashboard:*:read</code></pre>
+<p>Send the key as <code>X-API-Key</code> or <code>Authorization: Bearer</code>. Scopes nest:
+<code>admin</code> &gt; <code>write</code> &gt; <code>read</code> &gt; <code>classify</code>. The
+domain list is a hard boundary, not a filter: a key scoped to one domain cannot classify against,
+read, or even enumerate another. <code>/health</code> needs no credential, because a probe that
+requires a secret stops working when the secret rotates.</p>
+
+
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="tag-classify">classify</h3>
+<p class='muted'>Classify free text against one domain. `/classify/debug` adds the retrieval trace that the playground renders.</p>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/classify</span></p>
+<p><strong>Classify</strong></p>
+<p class='small'>body <a class='mono' href='#model-ClassifyRequest'>ClassifyRequest</a> · returns <a class='mono' href='#model-ClassifyResponse'>ClassifyResponse</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/classify/debug</span></p>
+<p><strong>Classify Debug</strong></p>
+<p class='muted'>The same decision, with the full retrieval trace attached.</p>
+<p class='small'>body <a class='mono' href='#model-ClassifyRequest'>ClassifyRequest</a> · returns <a class='mono' href='#model-ClassifyResponse'>ClassifyResponse</a></p>
+</div>
+<h3 id="tag-sessions">sessions</h3>
+<p class='muted'>Conversations. A session is created implicitly by the first classify call that names it; these endpoints inspect or forget one.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/sessions/{session_id}</span></p>
+<p><strong>Get Session</strong></p>
+<p class='small'>returns <a class='mono' href='#model-SessionView'>SessionView</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method delete">DELETE</span> <span class="mono">/api/v1/sessions/{session_id}</span></p>
+<p><strong>Clear Session</strong></p>
+</div>
+<h3 id="tag-domains">domains</h3>
+<p class='muted'>A domain is an isolated intent namespace. Retrieval never crosses a domain boundary, so the same phrase can mean different things in different domains. Domains also carry the extraction instructions applied to every intent inside them.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains</span></p>
+<p><strong>List Domains</strong></p>
+<p class='small'>returns <a class='mono' href='#model-DomainRead'>DomainRead[]</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/domains</span></p>
+<p><strong>Create Domain</strong></p>
+<p class='small'>body <a class='mono' href='#model-DomainCreate'>DomainCreate</a> · returns <a class='mono' href='#model-DomainConfig'>DomainConfig</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains/{domain_id}</span></p>
+<p><strong>Get Domain</strong></p>
+<p class='small'>returns <a class='mono' href='#model-DomainRead'>DomainRead</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method put">PUT</span> <span class="mono">/api/v1/domains/{domain_id}</span></p>
+<p><strong>Update Domain</strong></p>
+<p class='small'>body <a class='mono' href='#model-DomainUpdate'>DomainUpdate</a> · returns <a class='mono' href='#model-DomainConfig'>DomainConfig</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method delete">DELETE</span> <span class="mono">/api/v1/domains/{domain_id}</span></p>
+<p><strong>Delete Domain</strong></p>
+</div>
+<h3 id="tag-intents">intents</h3>
+<p class='muted'>Intents within a domain: description, entity schema and tool mapping. Renaming one updates its examples.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains/{domain_id}/intents</span></p>
+<p><strong>List Intents</strong></p>
+<p class='small'>returns <a class='mono' href='#model-IntentRead'>IntentRead[]</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/domains/{domain_id}/intents</span></p>
+<p><strong>Create Intent</strong></p>
+<p class='small'>body <a class='mono' href='#model-IntentCreate'>IntentCreate</a> · returns <a class='mono' href='#model-IntentConfig'>IntentConfig</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}</span></p>
+<p><strong>Get Intent</strong></p>
+<p class='small'>returns <a class='mono' href='#model-IntentRead'>IntentRead</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method put">PUT</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}</span></p>
+<p><strong>Update Intent</strong></p>
+<p class='small'>body <a class='mono' href='#model-IntentUpdate'>IntentUpdate</a> · returns <a class='mono' href='#model-IntentConfig'>IntentConfig</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method delete">DELETE</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}</span></p>
+<p><strong>Delete Intent</strong></p>
+</div>
+<h3 id="tag-examples">examples</h3>
+<p class='muted'>The retrieval corpus. Adding an example re-embeds it and rebuilds the domain's BM25 index before the request returns, so a new phrasing is classifiable immediately.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}/examples</span></p>
+<p><strong>List Examples</strong></p>
+<p class='small'>returns <a class='mono' href='#model-Example'>Example[]</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}/examples</span></p>
+<p><strong>Add Example</strong></p>
+<p class='small'>body <a class='mono' href='#model-ExampleCreate'>ExampleCreate</a> · returns <a class='mono' href='#model-Example'>Example</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}/examples/bulk</span></p>
+<p><strong>Add Examples</strong></p>
+<p class='small'>body <a class='mono' href='#model-ExampleCreate'>ExampleCreate[]</a> · returns <a class='mono' href='#model-Example'>Example[]</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method delete">DELETE</span> <span class="mono">/api/v1/domains/{domain_id}/intents/{intent_id}/examples/{example_id}</span></p>
+<p><strong>Delete Example</strong></p>
+</div>
+<h3 id="tag-index">index</h3>
+<p class='muted'>Force a rebuild, or read index state and version.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/domains/{domain_id}/index/status</span></p>
+<p><strong>Index Status</strong></p>
+<p class='small'>returns <a class='mono' href='#model-IndexStatus'>IndexStatus</a></p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method post">POST</span> <span class="mono">/api/v1/domains/{domain_id}/reindex</span></p>
+<p><strong>Reindex</strong></p>
+<p class='small'>returns <a class='mono' href='#model-IndexStatus'>IndexStatus</a></p>
+</div>
+<h3 id="tag-operations">operations</h3>
+<p class='muted'>Health, index health, Prometheus metrics, the audit trail and the available retrieval strategies.</p>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/audit</span></p>
+<p><strong>Audit Tail</strong></p>
+<p class='muted small'>Query parameters</p><table><tbody><tr><td class='mono'>limit</td><td class='mono small'>integer</td><td class='muted small'></td></tr></tbody></table>
+</div>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/health</span></p>
+<p><strong>Health</strong></p>
+<p class='muted'>Unauthenticated on purpose: a health probe should not need a credential.</p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/health/index</span></p>
+<p><strong>Index Health</strong></p>
+<p class='muted'>Per-domain index health: are the two indexes in step?</p>
+</div>
+<div class="endpoint"><p class="sig"><span class="method get">GET</span> <span class="mono">/api/v1/strategies</span></p>
+<p><strong>Strategies</strong></p>
+</div>
+
+<h2 id="models">Models</h2>
+<p class="muted">Field names, types and requiredness come straight from the schema.</p>
+<div class="model" id="model-Bm25Hit"><h3>Bm25Hit</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>example_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>score</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>rank</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ClassifyDebug"><h3>ClassifyDebug</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>normalized_text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>tokens</td><td class='mono small'>string[]</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>dense_hits</td><td class='mono small'>DenseHit[]</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>bm25_hits</td><td class='mono small'>Bm25Hit[]</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>rrf_intents</td><td class='mono small'>IntentScore[]</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>confidence_breakdown</td><td class='mono small'>ConfidenceBreakdown</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>index_version</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>strategy</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>timings</td><td class='mono small'>StageTimings</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ClassifyRequest"><h3>ClassifyRequest</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>domain</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>extract_entities</td><td class='mono small'>boolean</td><td class='small'></td><td class='muted small'>Override entity extraction for this request. None follows the service default. Extraction never runs for an UNKNOWN result.</td></tr><tr><td class='mono'>variant</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'>Force a retrieval strategy variant instead of the assigned one.</td></tr><tr><td class='mono'>session_id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'>Conversation id. Turns in the same session inform each other: a short follow-up is read against the previous question, and entities named earlier carry forward when the new intent accepts them.</td></tr><tr><td class='mono'>use_context</td><td class='mono small'>boolean</td><td class='small'></td><td class='muted small'>Whether earlier turns in the session may influence this one.</td></tr></tbody></table></div>
+<div class="model" id="model-ClassifyResponse"><h3>ClassifyResponse</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>domain_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>domain</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>confidence</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>entities</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entity_extraction</td><td class='mono small'>EntityExtractionInfo</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tool</td><td class='mono small'>ToolCall</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>reason</td><td class='mono small'>UnknownReason</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>top_intents</td><td class='mono small'>IntentScore[]</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>latency_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>request_id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>context</td><td class='mono small'>ContextInfo</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>debug</td><td class='mono small'>ClassifyDebug</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ConfidenceBreakdown"><h3>ConfidenceBreakdown</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>s_dense</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>s_rrf</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>s_margin</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>s_support</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>confidence</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>agg_top</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>agg_second</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>best_similarity</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ContextInfo"><h3>ContextInfo</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>session_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>turn</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>previous_turns</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>previous_intent</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>used_for_retrieval</td><td class='mono small'>boolean</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>retrieval_text</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>carried_entities</td><td class='mono small'>string[]</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-DenseHit"><h3>DenseHit</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>example_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>similarity</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>rank</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-DomainConfig"><h3>DomainConfig</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>system_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>user_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>updated_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-DomainCreate"><h3>DomainCreate</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>system_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>user_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-DomainRead"><h3>DomainRead</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>system_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>user_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>updated_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>intent_count</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>example_count</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-DomainUpdate"><h3>DomainUpdate</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>system_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>user_instructions</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-EntityExtractionInfo"><h3>EntityExtractionInfo</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>status</td><td class='mono small'>"ok" | "skipped" | "disabled" | "unavailable" | "failed"</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>model</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>detail</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>rejected</td><td class='mono small'>string[]</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-Example"><h3>Example</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>domain_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text_hash</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ExampleCreate"><h3>ExampleCreate</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IndexStatus"><h3>IndexStatus</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>domain_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>state</td><td class='mono small'>IndexState</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>version</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>built_at</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>bm25_doc_count</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>dense_count</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tokenizer_version</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IntentConfig"><h3>IntentConfig</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tool</td><td class='mono small'>ToolRef</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entity_schema</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>extraction_hints</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>domain_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>updated_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IntentCreate"><h3>IntentCreate</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tool</td><td class='mono small'>ToolRef</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entity_schema</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>extraction_hints</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IntentRead"><h3>IntentRead</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tool</td><td class='mono small'>ToolRef</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entity_schema</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>extraction_hints</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>domain_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>updated_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>example_count</td><td class='mono small'>integer</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IntentScore"><h3>IntentScore</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>intent</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>score</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>supporting_examples</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>best_similarity</td><td class='mono small'>number</td><td class='small'>yes</td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-IntentUpdate"><h3>IntentUpdate</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>description</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>tool</td><td class='mono small'>ToolRef</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entity_schema</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>status</td><td class='mono small'>Status</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>extraction_hints</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-SessionTurn"><h3>SessionTurn</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>turn</td><td class='mono small'>integer</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>text</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>intent_id</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>confidence</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entities</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>created_at</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-SessionView"><h3>SessionView</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>session_id</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>turns</td><td class='mono small'>SessionTurn[]</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>last_intent</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>entities_in_play</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-StageTimings"><h3>StageTimings</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>embed_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>dense_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>bm25_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>fusion_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>extraction_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>total_ms</td><td class='mono small'>number</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ToolCall"><h3>ToolCall</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'>yes</td><td class='muted small'></td></tr><tr><td class='mono'>version</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>arguments</td><td class='mono small'>object</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>missing_required</td><td class='mono small'>string[]</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>ready</td><td class='mono small'>boolean</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+<div class="model" id="model-ToolRef"><h3>ToolRef</h3><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td class='mono'>name</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr><tr><td class='mono'>version</td><td class='mono small'>string</td><td class='small'></td><td class='muted small'></td></tr></tbody></table></div>
+
+</div>
+</body>
+</html>

@@ -461,6 +461,16 @@ prompt a model would receive. It is not clever, and that is deliberate: its job 
 instructions, history, validation, carry-over and tool routing all execute for real without a
 key, with output stable enough to test against.</p>
 
+<h2>How the API is documented</h2>
+<p>Four surfaces, one source. The OpenAPI schema is produced by the app from the same Pydantic
+models the endpoints validate against, so the schema cannot describe a field the code does not
+have. Swagger UI at <code>/docs</code> and ReDoc at <code>/redoc</code> render it interactively;
+<code>/openapi.json</code> is the schema itself, for generating clients.</p>
+<p>The narrative reference at <code>/ui/api</code> is <em>generated</em> from that schema rather
+than written by hand, with the prose kept alongside the generator. A test fails if the checked-in
+page falls out of step with the code, which is the only way a reference stays true a year
+later.</p>
+
 <h2>Conversations, not queries</h2>
 
 <figure>

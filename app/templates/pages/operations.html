@@ -50,6 +50,7 @@
         <tr><td>Entity extraction</td><td>{% if extraction_enabled %}<span class="badge ok">on</span> {{ settings.openai_model }}{% elif extraction_available %}<span class="badge warn">provider ready, flag off</span>{% else %}<span class="badge warn">no provider configured</span>{% endif %}</td></tr>
         <tr><td>A/B testing</td><td>{% if ab_enabled %}<span class="badge ok">on</span> {{ variants | join(", ") }}{% else %}<span class="badge warn">off</span> using {{ settings.default_strategy }}{% endif %}</td></tr>
         <tr><td>Tracing</td><td>{% if tracing_enabled %}<span class="badge ok">on</span> {{ settings.otlp_endpoint }}{% else %}<span class="badge warn">off</span>{% endif %}</td></tr>
+        <tr><td>API documentation</td><td><a class="mono small" href="/ui/api">/ui/api</a> · <a class="mono small" href="/docs">/docs</a> · <a class="mono small" href="/redoc">/redoc</a> · <a class="mono small" href="/openapi.json">/openapi.json</a></td></tr>
         <tr><td>Metrics</td><td>{% if settings.metrics_enabled %}<span class="badge ok">on</span> <a class="mono small" href="/api/v1/metrics">/api/v1/metrics</a>{% else %}<span class="badge warn">off</span>{% endif %}</td></tr>
       </tbody>
     </table>

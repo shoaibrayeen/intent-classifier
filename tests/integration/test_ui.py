@@ -124,3 +124,29 @@ def test_static_assets_are_served_locally(client):
     htmx = client.get("/static/vendor/htmx.min.js")
     assert htmx.status_code == 200
     assert "htmx" in htmx.text[:200]
+
+
+def test_the_api_reference_is_served_in_the_ui(client):
+    response = client.get("/ui/api")
+    assert response.status_code == 200
+    assert "Intent Classifier API" in response.text
+    # Generated from the schema, so real endpoints must appear.
+    assert "/api/v1/classify" in response.text
+    assert "ClassifyRequest" in response.text
+
+
+def test_the_interactive_docs_are_available(client):
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
+
+    schema = client.get("/openapi.json").json()
+    assert schema["info"]["title"] == "Intent Classifier"
+    assert "/api/v1/classify" in schema["paths"]
+    assert {t["name"] for t in schema["tags"]} >= {"classify", "sessions", "domains"}
+
+
+def test_every_page_links_to_the_documentation(client):
+    for path in ["/", "/ui/playground", "/ui/operations"]:
+        body = client.get(path).text
+        assert 'href="/ui/api"' in body, path
+        assert 'href="/docs"' in body, path

@@ -20,7 +20,9 @@ POST /api/v1/classify
 Adding an intent means adding example phrasings. There is no model training
 step, and no fine-tuning when the catalogue changes.
 
-Open [architecture.html](architecture.html) in a browser for the full design.
+Open [architecture.html](architecture.html) for the design, and
+[api-documentation.html](api-documentation.html) for the API reference. Both open
+straight from the repository; the running app also serves Swagger UI at `/docs`.
 
 ## The problem
 
@@ -324,12 +326,36 @@ embedding model (~67 MB) into `./data/models`.
 | `/ui/playground` | classify a query and see every retrieval stage |
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
 | `/ui/operations` | index health, configuration in force, recent activity |
+| `/ui/api` | the generated API reference |
 
 The playground is the debugging tool: it shows the normalized query, the dense
 hits with cosine similarities, the BM25 hits with tokens and scores, the fused
 intent ranking, and the four confidence signals that produced the decision.
 
 Server-rendered with Jinja2 and htmx. No build step, no Node, no CDN at runtime.
+
+## API documentation
+
+Four surfaces, all served by the running app:
+
+| Where | What it is |
+|---|---|
+| `/ui/api` | single-page reference: narrative, every endpoint, every model |
+| `/docs` | Swagger UI, interactive, try requests in the browser |
+| `/redoc` | ReDoc rendering of the same schema |
+| `/openapi.json` | the OpenAPI 3.1 schema, for client generation |
+
+[api-documentation.html](api-documentation.html) is the same page as `/ui/api`
+and opens straight from the repository. It is **generated from the live schema**,
+so it cannot drift:
+
+```bash
+uv run python -m scripts.build_api_docs
+```
+
+A test fails if the checked-in file falls out of step with the code, so
+regenerate it whenever an endpoint or model changes. `--check` does the same in
+CI without writing.
 
 ## API
 
@@ -355,7 +381,8 @@ Base path `/api/v1`.
 | `POST` | `/domains/{domainId}/reindex` | force a BM25 rebuild |
 | `GET` | `/domains/{domainId}/index/status` | index state, version, document counts |
 
-Interactive docs at `/docs`.
+Interactive docs at `/docs`, the narrative reference at `/ui/api`, the raw
+schema at `/openapi.json`.
 
 `domain` in a classify request accepts either the domain id or its name.
 Errors return `{"error": {"code": ..., "message": ...}}` with 404, 409 or 400.

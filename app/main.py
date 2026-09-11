@@ -32,6 +32,93 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 
+API_DESCRIPTION = """
+Domain-aware intent classification using hybrid retrieval: dense vectors from
+FastEmbed over ChromaDB, BM25 for exact terminology, fused with Reciprocal Rank
+Fusion. Adding an intent means adding example phrasings, not retraining a model.
+
+### Where to start
+
+* `POST /api/v1/classify` is the endpoint almost every caller needs.
+* `POST /api/v1/classify/debug` returns the same decision with the full
+  retrieval trace: every dense hit and its similarity, every BM25 hit and its
+  score, the fused ranking, the confidence signals and per-stage timings.
+
+### Things worth knowing before you integrate
+
+* **`UNKNOWN` is a real answer.** When nothing matches well enough the response
+  is `UNKNOWN` with a `reason`, rather than the closest guess. For an agent,
+  a confident wrong intent invokes the wrong tool.
+* **The tool is reported, never called.** A result names the tool and its
+  validated arguments; running it is the caller's decision.
+* **Entity extraction is the only LLM call,** it runs only after a confident
+  match, and it never fails a classification: on a provider outage `entities`
+  is empty and `entity_extraction.status` says why.
+* **Pass a `session_id`** to make turns in a conversation inform each other.
+  A follow-up that cannot stand alone is retried against the previous question,
+  and entities named earlier carry into an intent that accepts them.
+* **Authentication is off by default.** When enabled, send `X-API-Key` or
+  `Authorization: Bearer`. Scopes nest: `admin` > `write` > `read` > `classify`.
+* Every response carries `X-Request-ID`, echoing one you supply.
+
+### Other formats
+
+This schema is served at `/openapi.json`. There is a ReDoc rendering at
+`/redoc`, and a single-page narrative reference at `/ui/api`.
+"""
+
+OPENAPI_TAGS = [
+    {
+        "name": "classify",
+        "description": (
+            "Classify free text against one domain. `/classify/debug` adds the "
+            "retrieval trace that the playground renders."
+        ),
+    },
+    {
+        "name": "sessions",
+        "description": (
+            "Conversations. A session is created implicitly by the first "
+            "classify call that names it; these endpoints inspect or forget one."
+        ),
+    },
+    {
+        "name": "domains",
+        "description": (
+            "A domain is an isolated intent namespace. Retrieval never crosses "
+            "a domain boundary, so the same phrase can mean different things in "
+            "different domains. Domains also carry the extraction instructions "
+            "applied to every intent inside them."
+        ),
+    },
+    {
+        "name": "intents",
+        "description": (
+            "Intents within a domain: description, entity schema and tool "
+            "mapping. Renaming one updates its examples."
+        ),
+    },
+    {
+        "name": "examples",
+        "description": (
+            "The retrieval corpus. Adding an example re-embeds it and rebuilds "
+            "the domain's BM25 index before the request returns, so a new "
+            "phrasing is classifiable immediately."
+        ),
+    },
+    {
+        "name": "index",
+        "description": "Force a rebuild, or read index state and version.",
+    },
+    {
+        "name": "operations",
+        "description": (
+            "Health, index health, Prometheus metrics, the audit trail and the "
+            "available retrieval strategies."
+        ),
+    },
+]
+
 
 def _configure_logging(settings: Settings) -> None:
     logging.basicConfig(
@@ -88,11 +175,15 @@ def create_app(settings: Settings | None = None, llm_client: LLMClient | None = 
     app = FastAPI(
         title="Intent Classifier",
         version=settings.app_version,
-        description=(
-            "Domain-aware intent classification using hybrid dense + sparse "
-            "retrieval fused with Reciprocal Rank Fusion, with entity "
-            "extraction and tool routing."
+        summary=(
+            "Map free-form language to configured business intents, extract the "
+            "entities that intent declares, and report the tool it maps to."
         ),
+        description=API_DESCRIPTION,
+        openapi_tags=OPENAPI_TAGS,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
         lifespan=lifespan,
     )
 

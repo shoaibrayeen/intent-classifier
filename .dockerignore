@@ -8,3 +8,4 @@ __pycache__
 .ruff_cache
 .DS_Store
 architecture.html
+# api-documentation.html is copied in explicitly; it is served at /ui/api
