@@ -23,7 +23,13 @@ def test_response_carries_the_configured_tool(client, contract_domain):
     body = client.post(
         "/api/v1/classify", json={"domain": "contract", "text": "Find all contracts with Microsoft"}
     ).json()
-    assert body["tool"] == {"name": "search_contracts", "version": "v1"}
+    tool = body["tool"]
+    assert tool["name"] == "search_contracts"
+    assert tool["version"] == "v1"
+    # No extraction ran, so there are no arguments yet, and nothing is required.
+    assert tool["arguments"] == {}
+    assert tool["missing_required"] == []
+    assert tool["ready"] is True
 
 
 def test_domain_can_be_addressed_by_id_or_name(client, contract_domain):

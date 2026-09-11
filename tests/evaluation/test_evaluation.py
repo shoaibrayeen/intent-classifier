@@ -8,12 +8,15 @@ them, the evaluation report explains which queries moved:
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from app.config import Settings
 from app.services.container import build_container
+from app.services.evaluation import load_cases
 from scripts.seed import seed
-from tests.evaluation.run_eval import load_cases, predict, score
+from tests.evaluation.run_eval import predict, score
 
 MIN_TOP1 = 0.85
 MIN_TOP3 = 0.95
@@ -23,12 +26,18 @@ MAX_FALSE_UNKNOWN = 0.10
 
 @pytest.fixture(scope="module")
 def metrics():
-    settings = Settings(chroma_mode="ephemeral")
+    settings = Settings(
+        chroma_mode="ephemeral",
+        auth_enabled=False,
+        audit_log_enabled=False,
+        entity_extraction_enabled=False,
+    )
     container = build_container(settings)
     container.store.reset_all()
     container.index_manager.clear()
     seed(container)
-    return score(predict(container, load_cases()), settings)
+    predictions = asyncio.run(predict(container, load_cases(), None))
+    return score(predictions, settings)
 
 
 def test_top1_accuracy(metrics):

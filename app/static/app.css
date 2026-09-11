@@ -128,3 +128,14 @@ pre.mono { background: var(--bg); padding: 0.7rem; border-radius: 8px; overflow-
   form .row { flex-direction: column; }
   table { display: block; overflow-x: auto; }
 }
+
+/* inline checkbox rows read better than stacked labels */
+label.inline {
+  flex-direction: row; align-items: center; gap: .45rem;
+  color: var(--ink); font-size: 14px;
+}
+label.inline input[type="checkbox"] { width: auto; margin: 0; }
+
+/* htmx request indicator */
+.htmx-indicator { opacity: 0; transition: opacity .2s; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }

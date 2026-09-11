@@ -52,11 +52,35 @@ class Settings(BaseSettings):
     w_margin: float = 0.25
     w_support: float = 0.15
 
-    # --- LLM (wired but unused until entity extraction is enabled) -----
+    # --- LLM / entity extraction ---------------------------------------
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
     entity_extraction_enabled: bool = False
+    llm_timeout_seconds: float = Field(default=10.0, gt=0)
+    llm_max_retries: int = Field(default=1, ge=0, le=5)
+
+    # --- A/B testing of retrieval strategies ---------------------------
+    ab_testing_enabled: bool = False
+    default_strategy: str = "hybrid_rrf"
+    ab_variants: str = "hybrid_rrf,dense_only"
+
+    # --- security -------------------------------------------------------
+    auth_enabled: bool = False
+    #: "secret:domains:scopes" entries, comma separated. See app/security/auth.py
+    api_keys: str = ""
+    #: The HTML UI is a human surface; when auth is on it needs a key too,
+    #: unless this is set (useful behind an authenticating proxy).
+    ui_auth_exempt: bool = False
+
+    # --- observability ---------------------------------------------------
+    metrics_enabled: bool = True
+    audit_log_enabled: bool = True
+    audit_log_path: str = "./data/audit/audit.jsonl"
+    #: User queries can carry personal data, so their text is opt-in.
+    audit_log_query_text: bool = False
+    tracing_enabled: bool = False
+    otlp_endpoint: str = "http://localhost:4317"
 
 
 @lru_cache

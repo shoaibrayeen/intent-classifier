@@ -2,37 +2,44 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from app.dependencies import get_container, get_domain_service
+from app.dependencies import (
+    authorize_domain,
+    get_classification_service,
+    get_domain_service,
+    require_classify,
+)
 from app.models.classification import ClassifyRequest, ClassifyResponse
-from app.services.container import Container
+from app.security.auth import Principal
+from app.services.classification_service import ClassificationService
 from app.services.domain_service import DomainService
 
 router = APIRouter(prefix="/classify", tags=["classify"])
 
 
-def _classify(
-    payload: ClassifyRequest, container: Container, domains: DomainService, debug: bool
-) -> ClassifyResponse:
-    domain = domains.resolve(payload.domain)
-    return container.classifier.classify(domain, payload.text, debug=debug)
-
-
 @router.post("", response_model=ClassifyResponse, response_model_exclude={"debug"})
-def classify(
+async def classify(
     payload: ClassifyRequest,
-    container: Container = Depends(get_container),
+    request: Request,
+    principal: Principal = Depends(require_classify),
+    service: ClassificationService = Depends(get_classification_service),
     domains: DomainService = Depends(get_domain_service),
 ) -> ClassifyResponse:
-    return _classify(payload, container, domains, debug=False)
+    domain = domains.resolve(payload.domain)
+    authorize_domain(request, domain.id, domain.name)
+    return await service.classify(payload, debug=False)
 
 
 @router.post("/debug", response_model=ClassifyResponse)
-def classify_debug(
+async def classify_debug(
     payload: ClassifyRequest,
-    container: Container = Depends(get_container),
+    request: Request,
+    principal: Principal = Depends(require_classify),
+    service: ClassificationService = Depends(get_classification_service),
     domains: DomainService = Depends(get_domain_service),
 ) -> ClassifyResponse:
-    """Same pipeline, with the retrieval trace attached."""
-    return _classify(payload, container, domains, debug=True)
+    """The same decision, with the full retrieval trace attached."""
+    domain = domains.resolve(payload.domain)
+    authorize_domain(request, domain.id, domain.name)
+    return await service.classify(payload, debug=True)

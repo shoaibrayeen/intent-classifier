@@ -15,11 +15,18 @@ dependencies = [
     "fastembed==0.8.0",
     "rank-bm25==0.2.2",
     "openai==3.13.0",
+    # Observability. The OpenTelemetry packages arrive transitively with
+    # chromadb, but this service uses them directly, so they are declared here.
+    "prometheus-client==0.24.1",
+    "opentelemetry-api>=1.30",
+    "opentelemetry-sdk>=1.30",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.30",
 ]
 
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
+    "pytest-asyncio==1.3.0",
     "httpx==0.28.1",
     "ruff>=0.14",
 ]
@@ -34,6 +41,8 @@ packages = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]

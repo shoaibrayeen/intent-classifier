@@ -5,7 +5,8 @@
 <p class="muted">Classify a query against one domain and inspect every stage of the retrieval pipeline.</p>
 
 <section class="card">
-  <form hx-post="/ui/playground/classify" hx-target="#classify-result" hx-swap="innerHTML">
+  <form hx-post="/ui/playground/classify" hx-target="#classify-result" hx-swap="innerHTML"
+        hx-indicator="#classify-busy">
     <label>Domain
       <select name="domain" required>
         {% for domain in domains %}
@@ -20,7 +21,26 @@
     <label>Query
       <textarea name="text" rows="3" required placeholder="Show me all contracts with Microsoft expiring this year"></textarea>
     </label>
-    <button type="submit">Classify</button>
+    <div class="row">
+      <label>Retrieval strategy
+        <select name="variant">
+          <option value="">assigned automatically</option>
+          {% for strategy in strategies %}
+          <option value="{{ strategy.name }}">{{ strategy.name }} — {{ strategy.description }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <label class="inline">
+      <input type="checkbox" name="extract_entities" value="1" {% if not extraction_available %}disabled{% endif %}>
+      Extract entities
+      {% if not extraction_available %}
+        <span class="muted small">(needs an LLM provider: set OPENAI_API_KEY)</span>
+      {% elif not extraction_enabled %}
+        <span class="muted small">(off by default; ticking this enables it for one request)</span>
+      {% endif %}
+    </label>
+    <button type="submit">Classify <span id="classify-busy" class="htmx-indicator">…</span></button>
   </form>
 </section>
 

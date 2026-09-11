@@ -16,9 +16,58 @@
     <div>
       <div class="label">Tool</div>
       <div class="mono">{{ result.tool.name if result.tool else "—" }}</div>
+      {% if result.tool and result.tool.missing_required %}
+      <div class="muted small">missing: {{ result.tool.missing_required | join(", ") }}</div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="label">Latency</div>
+      <div class="result-confidence">{{ result.latency_ms | num(1) }}<span class="muted small">ms</span></div>
+      {% if debug %}<div class="muted small">{{ debug.strategy }}</div>{% endif %}
     </div>
   </div>
 </section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Entities</h2>
+    {% if result.entities %}
+    <table>
+      <thead><tr><th>Name</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for name, value in result.entities.items() %}
+        <tr><td class="mono small">{{ name }}</td><td>{{ value }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No entities extracted.</p>
+    {% endif %}
+    {% if result.entity_extraction %}
+    <p class="muted small">
+      extraction: {{ result.entity_extraction.status }}
+      {%- if result.entity_extraction.model %} · {{ result.entity_extraction.model }}{% endif %}
+      {%- if result.entity_extraction.detail %} · {{ result.entity_extraction.detail }}{% endif %}
+    </p>
+      {% if result.entity_extraction.rejected %}
+      <p class="muted small">rejected: {{ result.entity_extraction.rejected | join("; ") }}</p>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Tool call</h2>
+    {% if result.tool %}
+    <pre class="mono">{{ {"name": result.tool.name, "version": result.tool.version, "arguments": result.tool.arguments} | json_pretty }}</pre>
+    <p class="muted small">
+      {% if result.tool.ready %}Ready to invoke.{% else %}Not ready: required arguments are missing.{% endif %}
+      This service never calls the tool.
+    </p>
+    {% else %}
+    <p class="muted">This intent has no tool mapping.</p>
+    {% endif %}
+  </section>
+</div>
 
 {% if debug %}
 <section class="card">
@@ -84,4 +133,22 @@
     </table>
   </section>
 </div>
+{% endif %}
+
+{% if debug %}
+<section class="card">
+  <h2>Stage timings</h2>
+  <table>
+    <thead><tr><th>Stage</th><th class="num">Milliseconds</th></tr></thead>
+    <tbody>
+      <tr><td>embed</td><td class="num">{{ debug.timings.embed_ms | num(1) }}</td></tr>
+      <tr><td>dense retrieval</td><td class="num">{{ debug.timings.dense_ms | num(1) }}</td></tr>
+      <tr><td>BM25 retrieval</td><td class="num">{{ debug.timings.bm25_ms | num(1) }}</td></tr>
+      <tr><td>fusion and scoring</td><td class="num">{{ debug.timings.fusion_ms | num(1) }}</td></tr>
+      <tr><td>entity extraction</td><td class="num">{{ debug.timings.extraction_ms | num(1) }}</td></tr>
+      <tr><td><strong>total</strong></td><td class="num"><strong>{{ debug.timings.total_ms | num(1) }}</strong></td></tr>
+    </tbody>
+  </table>
+  {% if result.request_id %}<p class="muted small">request id <span class="mono">{{ result.request_id }}</span></p>{% endif %}
+</section>
 {% endif %}

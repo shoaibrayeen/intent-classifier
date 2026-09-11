@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Evaluation · Intent Classifier{% endblock %}
+{% block content %}
+<h1>Evaluation</h1>
+<p class="muted">
+  Runs the held-out query set against the live catalogue. None of these queries are training
+  examples, and some are deliberately out of scope and must come back as UNKNOWN.
+</p>
+
+<section class="card">
+  <form hx-post="/ui/evaluation/run" hx-target="#evaluation-result" hx-swap="innerHTML"
+        hx-indicator="#eval-busy">
+    <label>Retrieval strategy
+      <select name="variant">
+        <option value="">service default</option>
+        <option value="hybrid_rrf">hybrid_rrf</option>
+        <option value="dense_only">dense_only</option>
+        <option value="bm25_only">bm25_only</option>
+        <option value="hybrid_rrf_k20">hybrid_rrf_k20</option>
+        <option value="hybrid_top1">hybrid_top1</option>
+        <option value="hybrid_wide">hybrid_wide</option>
+      </select>
+    </label>
+    <button type="submit">Run evaluation <span id="eval-busy" class="htmx-indicator">…</span></button>
+  </form>
+  <p class="muted small">Comparing two variants here is the honest way to judge a retrieval change.</p>
+</section>
+
+<div id="evaluation-result"></div>
+{% endblock %}

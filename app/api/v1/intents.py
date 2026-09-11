@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
-from app.dependencies import get_domain_service, get_intent_service
+from app.dependencies import (
+    authorize_domain,
+    get_domain_service,
+    get_intent_service,
+    require_read,
+    require_write,
+)
 from app.models.intent import IntentConfig, IntentCreate, IntentRead, IntentUpdate
+from app.security.auth import Principal
 from app.services.domain_service import DomainService
 from app.services.intent_service import IntentService
 
@@ -16,20 +23,26 @@ router = APIRouter(prefix="/domains/{domain_id}/intents", tags=["intents"])
 def create_intent(
     domain_id: str,
     payload: IntentCreate,
+    request: Request,
+    principal: Principal = Depends(require_write),
     domains: DomainService = Depends(get_domain_service),
     service: IntentService = Depends(get_intent_service),
 ) -> IntentConfig:
-    domains.get(domain_id)
+    domain = domains.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
     return service.create(domain_id, payload)
 
 
 @router.get("", response_model=list[IntentRead])
 def list_intents(
     domain_id: str,
+    request: Request,
+    principal: Principal = Depends(require_read),
     domains: DomainService = Depends(get_domain_service),
     service: IntentService = Depends(get_intent_service),
 ) -> list[IntentRead]:
-    domains.get(domain_id)
+    domain = domains.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
     return service.list(domain_id)
 
 
@@ -37,10 +50,13 @@ def list_intents(
 def get_intent(
     domain_id: str,
     intent_id: str,
+    request: Request,
+    principal: Principal = Depends(require_read),
     domains: DomainService = Depends(get_domain_service),
     service: IntentService = Depends(get_intent_service),
 ) -> IntentRead:
-    domains.get(domain_id)
+    domain = domains.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
     return service.read(domain_id, intent_id)
 
 
@@ -49,10 +65,13 @@ def update_intent(
     domain_id: str,
     intent_id: str,
     payload: IntentUpdate,
+    request: Request,
+    principal: Principal = Depends(require_write),
     domains: DomainService = Depends(get_domain_service),
     service: IntentService = Depends(get_intent_service),
 ) -> IntentConfig:
-    domains.get(domain_id)
+    domain = domains.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
     return service.update(domain_id, intent_id, payload)
 
 
@@ -60,8 +79,12 @@ def update_intent(
 def delete_intent(
     domain_id: str,
     intent_id: str,
+    request: Request,
+    principal: Principal = Depends(require_write),
     domains: DomainService = Depends(get_domain_service),
     service: IntentService = Depends(get_intent_service),
 ) -> None:
-    domains.get(domain_id)
+    domain = domains.get(domain_id)
+    authorize_domain(request, domain.id, domain.name)
     service.delete(domain_id, intent_id)
+    request.app.state.container.audit.record(action="intent.delete", resource=f"intent:{intent_id}")

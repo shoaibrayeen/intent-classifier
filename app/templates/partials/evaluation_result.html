@@ -1,0 +1,76 @@
+<section class="card">
+  <h2>Results <span class="badge">{{ report.strategy }}</span></h2>
+  {% if report.skipped %}
+  <p class="muted small">Skipped: {{ report.skipped | join("; ") }}</p>
+  {% endif %}
+  <div class="result-head">
+    <div>
+      <div class="label">Top-1 accuracy</div>
+      <div class="result-confidence">{{ report.top1 | pct }}</div>
+      <div class="confidence-bar"><span style="width: {{ (report.top1 * 100) | round(0) }}%"></span></div>
+    </div>
+    <div>
+      <div class="label">Top-3 accuracy</div>
+      <div class="result-confidence">{{ report.top3 | pct }}</div>
+      <div class="confidence-bar"><span style="width: {{ (report.top3 * 100) | round(0) }}%"></span></div>
+    </div>
+    <div>
+      <div class="label">UNKNOWN detection</div>
+      <div class="result-confidence">{{ report.unknown_detection | pct }}</div>
+      <div class="confidence-bar"><span style="width: {{ (report.unknown_detection * 100) | round(0) }}%"></span></div>
+    </div>
+    <div>
+      <div class="label">Valid queries refused</div>
+      <div class="result-confidence">{{ report.false_unknown | pct }}</div>
+      <div class="muted small">lower is better</div>
+    </div>
+  </div>
+  <p class="muted small">
+    {{ report.cases | length }} cases: {{ report.in_domain | length }} in-domain,
+    {{ report.out_domain | length }} out-of-domain. Thresholds in force:
+    confidence {{ settings.confidence_threshold }}, similarity {{ settings.min_dense_similarity }}.
+  </p>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Accuracy by intent</h2>
+    <table>
+      <thead><tr><th>Intent</th><th class="num">Correct</th><th class="num">Total</th><th class="num">Accuracy</th></tr></thead>
+      <tbody>
+        {% for row in report.per_intent %}
+        <tr>
+          <td class="mono small">{{ row.intent }}</td>
+          <td class="num">{{ row.correct }}</td>
+          <td class="num">{{ row.total }}</td>
+          <td class="num">{{ row.accuracy | pct }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No in-domain cases ran.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Incorrect predictions</h2>
+    {% if report.incorrect %}
+    <table>
+      <thead><tr><th>Query</th><th>Expected</th><th>Got</th><th class="num">Conf</th><th class="num">Sim</th></tr></thead>
+      <tbody>
+        {% for case in report.incorrect %}
+        <tr>
+          <td>{{ case.query }}</td>
+          <td class="mono small">{{ case.expected }}</td>
+          <td class="mono small">{{ case.predicted }}</td>
+          <td class="num">{{ case.confidence | num(2) }}</td>
+          <td class="num">{{ case.best_similarity | num(3) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Every case matched.</p>
+    {% endif %}
+  </section>
+</div>

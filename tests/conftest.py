@@ -10,15 +10,50 @@ from fastapi.testclient import TestClient
 os.environ["CHROMA_MODE"] = "ephemeral"
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["ENTITY_EXTRACTION_ENABLED"] = "false"
+os.environ["AUTH_ENABLED"] = "false"
+os.environ["AUDIT_LOG_ENABLED"] = "false"
 os.environ.setdefault("MODEL_CACHE_DIR", "./data/models")
 
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
+def make_settings(**overrides) -> Settings:
+    """Test defaults: in-memory store, no auth, no audit file, no LLM."""
+    base = {
+        "chroma_mode": "ephemeral",
+        "model_cache_dir": "./data/models",
+        "auth_enabled": False,
+        "audit_log_enabled": False,
+        "entity_extraction_enabled": False,
+        "openai_api_key": "",
+    }
+    base.update(overrides)
+    return Settings(**base)
+
+
 @pytest.fixture(scope="session")
 def settings() -> Settings:
-    return Settings(chroma_mode="ephemeral", model_cache_dir="./data/models")
+    return make_settings()
+
+
+@pytest.fixture
+def app_factory():
+    """Build an app with custom settings and/or a scripted LLM client."""
+    created = []
+
+    def build(settings_overrides: dict | None = None, llm_client=None):
+        app = create_app(make_settings(**(settings_overrides or {})), llm_client=llm_client)
+        client = TestClient(app)
+        client.__enter__()
+        app.state.container.store.reset_all()
+        app.state.container.index_manager.clear()
+        created.append(client)
+        return app, client
+
+    yield build
+    for client in created:
+        client.__exit__(None, None, None)
 
 
 @pytest.fixture
@@ -36,8 +71,7 @@ def client(settings: Settings):
         yield test_client
 
 
-@pytest.fixture
-def contract_domain(client: TestClient) -> dict:
+def seed_contract_domain(client: TestClient) -> dict:
     """A small contract domain with two intents and their examples."""
     domain = client.post(
         "/api/v1/domains", json={"name": "contract", "description": "Contracts"}
@@ -49,7 +83,10 @@ def contract_domain(client: TestClient) -> dict:
             "name": "CONTRACT_SEARCH",
             "description": "Search contracts",
             "tool": {"name": "search_contracts", "version": "v1"},
-            "entity_schema": {"counterparty": {"type": "string"}},
+            "entity_schema": {
+                "counterparty": {"type": "string", "required": True},
+                "status": {"type": "enum", "values": ["ACTIVE", "EXPIRED"]},
+            },
         },
     ).json()
     expiry = client.post(
@@ -93,3 +130,8 @@ def contract_domain(client: TestClient) -> dict:
     )
 
     return {"domain": domain, "search": search, "expiry": expiry}
+
+
+@pytest.fixture
+def contract_domain(client: TestClient) -> dict:
+    return seed_contract_domain(client)

@@ -25,11 +25,14 @@ from app.models.classification import ClassifyRequest
 from app.models.domain import DomainCreate
 from app.models.example import ExampleCreate
 from app.models.intent import IntentCreate, ToolRef
+from app.observability import tracing
 from app.services.container import Container
 from app.services.domain_service import DomainService
+from app.services.evaluation import run_evaluation
 from app.services.example_service import ExampleService
 from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
+from app.services.strategies import BUILTIN_STRATEGIES
 from app.ui.templating import templates
 
 router = APIRouter(tags=["ui"], include_in_schema=False)
@@ -102,11 +105,74 @@ def playground(
     request: Request,
     domain: str | None = None,
     domains: DomainService = Depends(get_domain_service),
+    container: Container = Depends(get_container),
 ):
     return templates.TemplateResponse(
         request=request,
         name="pages/playground.html",
-        context={"domains": domains.list(), "selected": domain},
+        context={
+            "domains": domains.list(),
+            "selected": domain,
+            "strategies": list(BUILTIN_STRATEGIES.values()),
+            "extraction_available": container.entity_extractor.available,
+            "extraction_enabled": container.entity_extractor.enabled,
+        },
+    )
+
+
+@router.get("/ui/operations", response_class=HTMLResponse)
+def operations(
+    request: Request,
+    container: Container = Depends(get_container),
+    domains: DomainService = Depends(get_domain_service),
+):
+    """Index health, configuration and recent audit activity in one place."""
+    statuses = []
+    for domain in domains.list():
+        status = container.index_manager.status(domain.id)
+        statuses.append(
+            {
+                "domain": domain,
+                "status": status,
+                "in_sync": status.bm25_doc_count == status.dense_count,
+            }
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/operations.html",
+        context={
+            "statuses": statuses,
+            "settings": container.settings,
+            "auth_enabled": container.authenticator.enabled,
+            "key_count": container.authenticator.key_count,
+            "extraction_available": container.entity_extractor.available,
+            "extraction_enabled": container.entity_extractor.enabled,
+            "tracing_enabled": tracing.enabled(),
+            "ab_enabled": container.strategies.enabled,
+            "variants": container.strategies.variants,
+            "audit_entries": container.audit.tail(25),
+            "audit_enabled": container.audit.enabled,
+        },
+    )
+
+
+@router.get("/ui/evaluation", response_class=HTMLResponse)
+def evaluation_page(request: Request):
+    return templates.TemplateResponse(request=request, name="pages/evaluation.html", context={})
+
+
+@router.post("/ui/evaluation/run", response_class=HTMLResponse)
+async def ui_run_evaluation(
+    request: Request,
+    variant: Annotated[str, Form()] = "",
+    container: Container = Depends(get_container),
+):
+    """Run the held-out evaluation set against the live catalogue."""
+    report = await run_evaluation(container, variant or None)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/evaluation_result.html",
+        context={"report": report, "settings": container.settings},
     )
 
 
@@ -254,16 +320,21 @@ def ui_reindex(
 
 
 @router.post("/ui/playground/classify", response_class=HTMLResponse)
-def ui_classify(
+async def ui_classify(
     request: Request,
     domain: Annotated[str, Form()],
     text: Annotated[str, Form()],
+    extract_entities: Annotated[str, Form()] = "",
+    variant: Annotated[str, Form()] = "",
     container: Container = Depends(get_container),
-    domains: DomainService = Depends(get_domain_service),
 ):
-    payload = ClassifyRequest(domain=domain, text=text)
-    resolved = domains.resolve(payload.domain)
-    result = container.classifier.classify(resolved, payload.text, debug=True)
+    payload = ClassifyRequest(
+        domain=domain,
+        text=text,
+        extract_entities=True if extract_entities else None,
+        variant=variant or None,
+    )
+    result = await container.classification.classify(payload, debug=True)
     return templates.TemplateResponse(
         request=request,
         name="partials/classify_result.html",

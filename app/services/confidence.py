@@ -18,6 +18,7 @@ from __future__ import annotations
 from app.config import Settings
 from app.models.classification import ConfidenceBreakdown, IntentScore
 from app.services.rrf import max_possible_score
+from app.services.strategies import RetrievalStrategy
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -25,7 +26,10 @@ def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
 
 
 def compute(
-    ranked: list[IntentScore], settings: Settings, support_target: int = 3
+    ranked: list[IntentScore],
+    settings: Settings,
+    support_target: int = 3,
+    strategy: RetrievalStrategy | None = None,
 ) -> ConfidenceBreakdown:
     if not ranked:
         return ConfidenceBreakdown(
@@ -43,12 +47,27 @@ def compute(
     agg_top = top.score
     agg_second = ranked[1].score if len(ranked) > 1 else 0.0
 
-    ceiling = max_possible_score(settings.rrf_k, settings.agg_top_n, n_lists=2)
+    # A single-retriever strategy can only ever reach half the hybrid ceiling,
+    # so it is normalized against its own maximum rather than being penalised
+    # for evidence it was never configured to collect.
+    rrf_k = strategy.rrf_k if strategy else settings.rrf_k
+    agg_top_n = strategy.agg_top_n if strategy else settings.agg_top_n
+    n_lists = 2
+    if strategy is not None and not (strategy.use_dense and strategy.use_bm25):
+        n_lists = 1
+    ceiling = max_possible_score(rrf_k, agg_top_n, n_lists=n_lists)
     s_rrf = _clamp(agg_top / ceiling) if ceiling > 0 else 0.0
     s_margin = _clamp((agg_top - agg_second) / agg_top) if agg_top > 0 else 0.0
 
     span = settings.dense_sim_ceil - settings.dense_sim_floor
-    s_dense = _clamp((top.best_similarity - settings.dense_sim_floor) / span) if span > 0 else 0.0
+    if strategy is not None and not strategy.use_dense:
+        # Without dense retrieval there is no similarity to judge; redistributing
+        # its weight is more honest than scoring every result as zero.
+        s_dense = _clamp((s_rrf + s_margin) / 2)
+    else:
+        s_dense = (
+            _clamp((top.best_similarity - settings.dense_sim_floor) / span) if span > 0 else 0.0
+        )
 
     s_support = _clamp(min(top.supporting_examples, support_target) / support_target)
 

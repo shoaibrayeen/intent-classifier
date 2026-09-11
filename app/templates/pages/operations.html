@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Operations · Intent Classifier{% endblock %}
+{% block content %}
+<h1>Operations</h1>
+<p class="muted">Index health, the configuration actually in force, and recent activity.</p>
+
+<section class="card">
+  <h2>Index health</h2>
+  <table>
+    <thead><tr><th>Domain</th><th>State</th><th class="num">Version</th><th class="num">BM25 docs</th><th class="num">Vectors</th><th>In sync</th><th>Built</th></tr></thead>
+    <tbody>
+      {% for row in statuses %}
+      <tr>
+        <td><a href="/ui/domains/{{ row.domain.id }}">{{ row.domain.name }}</a></td>
+        <td><span class="badge {{ 'ok' if row.status.state == 'ready' else 'warn' }}">{{ row.status.state }}</span></td>
+        <td class="num">{{ row.status.version }}</td>
+        <td class="num">{{ row.status.bm25_doc_count }}</td>
+        <td class="num">{{ row.status.dense_count }}</td>
+        <td>{% if row.in_sync %}<span class="badge ok">yes</span>{% else %}<span class="badge warn">drifted</span>{% endif %}</td>
+        <td class="muted small">{{ row.status.built_at or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No domains configured.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">The two indexes are written together. A drift means a mutation failed partway.</p>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Security</h2>
+    <table>
+      <tbody>
+        <tr><td>Authentication</td><td>{% if auth_enabled %}<span class="badge ok">on</span> {{ key_count }} key(s){% else %}<span class="badge warn">off</span> every caller has full access{% endif %}</td></tr>
+        <tr><td>Audit log</td><td>{% if audit_enabled %}<span class="badge ok">on</span> <span class="mono small">{{ settings.audit_log_path }}</span>{% else %}<span class="badge warn">off</span>{% endif %}</td></tr>
+        <tr><td>Query text recorded</td><td>{{ "yes" if settings.audit_log_query_text else "no (queries may contain personal data)" }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Pipeline configuration</h2>
+    <table>
+      <tbody>
+        <tr><td>Confidence threshold</td><td class="mono">{{ settings.confidence_threshold }}</td></tr>
+        <tr><td>Minimum similarity</td><td class="mono">{{ settings.min_dense_similarity }}</td></tr>
+        <tr><td>Retrieval top-k</td><td class="mono">{{ settings.retrieval_top_k }}</td></tr>
+        <tr><td>Fusion k / aggregation</td><td class="mono">{{ settings.rrf_k }} / top {{ settings.agg_top_n }}</td></tr>
+        <tr><td>Entity extraction</td><td>{% if extraction_enabled %}<span class="badge ok">on</span> {{ settings.openai_model }}{% elif extraction_available %}<span class="badge warn">provider ready, flag off</span>{% else %}<span class="badge warn">no provider configured</span>{% endif %}</td></tr>
+        <tr><td>A/B testing</td><td>{% if ab_enabled %}<span class="badge ok">on</span> {{ variants | join(", ") }}{% else %}<span class="badge warn">off</span> using {{ settings.default_strategy }}{% endif %}</td></tr>
+        <tr><td>Tracing</td><td>{% if tracing_enabled %}<span class="badge ok">on</span> {{ settings.otlp_endpoint }}{% else %}<span class="badge warn">off</span>{% endif %}</td></tr>
+        <tr><td>Metrics</td><td>{% if settings.metrics_enabled %}<span class="badge ok">on</span> <a class="mono small" href="/api/v1/metrics">/api/v1/metrics</a>{% else %}<span class="badge warn">off</span>{% endif %}</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Recent activity</h2>
+  {% if audit_entries %}
+  <table>
+    <thead><tr><th>When</th><th>Action</th><th>Resource</th><th>Outcome</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for entry in audit_entries %}
+      <tr>
+        <td class="mono small">{{ entry.ts[11:19] if entry.ts else "—" }}</td>
+        <td class="mono small">{{ entry.action }}</td>
+        <td class="muted small">{{ entry.resource or "—" }}</td>
+        <td>{% if entry.outcome in ("ok", "matched") %}<span class="badge ok">{{ entry.outcome }}</span>{% else %}<span class="badge warn">{{ entry.outcome }}</span>{% endif %}</td>
+        <td class="muted small">
+          {%- if entry.intent %}{{ entry.intent }} @ {{ entry.confidence }}{% if entry.latency_ms %} · {{ entry.latency_ms }}ms{% endif %}
+          {%- elif entry.detail %}{{ entry.detail }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Nothing recorded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
