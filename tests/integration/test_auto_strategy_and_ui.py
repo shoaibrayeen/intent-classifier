@@ -241,3 +241,26 @@ def test_a_lexical_only_pass_is_never_an_auto_fallback(app_factory):
 
     selector = StrategySelector(Settings(chroma_mode="ephemeral"))
     assert all(s.use_dense for s in selector.auto_sequence())
+
+
+# ------------------------------------------------------------------ changelog
+def test_the_changelog_is_served(client):
+    response = client.get("/ui/changelog")
+    assert response.status_code == 200
+    assert "Changelog" in response.text
+    assert "text/html" in response.headers["content-type"]
+
+
+def test_the_changelog_is_also_at_the_obvious_path(client):
+    """People look for /changelog, not /ui/changelog."""
+    assert client.get("/changelog").status_code == 200
+
+
+def test_the_changelog_is_linked_from_the_navigation(client):
+    assert "/ui/changelog" in client.get("/ui/playground").text
+
+
+def test_the_api_reference_still_resolves_from_its_new_home(client):
+    response = client.get("/ui/api")
+    assert response.status_code == 200
+    assert "Intent Classifier" in response.text

@@ -31,8 +31,9 @@ TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='/opt/models')"
 COPY README.md ./README.md
 COPY app ./app
 COPY scripts ./scripts
-# Generated API reference, served at /ui/api.
-COPY api-documentation.html ./api-documentation.html
+# Documentation: the generated API reference is served at /ui/api and the
+# changelog at /ui/changelog, so both ship inside the image.
+COPY docs ./docs
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 

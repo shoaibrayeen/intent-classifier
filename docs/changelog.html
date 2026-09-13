@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog · Intent Classifier</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf9f7; --panel: #fff; --ink: #1a1917; --muted: #6b6a66;
+    --line: #e3e1dc; --accent: #2f6f4f; --accent-soft: #e8f1eb;
+    --sparse: #7a5c2e; --sparse-soft: #f4ecdd; --danger: #9c2f2f;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a; --panel: #1e2023; --ink: #eceae6; --muted: #9b9a95;
+      --line: #32343a; --accent: #6fbf94; --accent-soft: #223029;
+      --sparse: #d4ac6a; --sparse-soft: #2e2820; --danger: #e0806f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; margin-bottom: 2.5rem; }
+  h1 { font-size: 2rem; margin: 0 0 .4rem; letter-spacing: -.025em; }
+  h2 {
+    font-size: 1.25rem; margin: 3rem 0 .75rem; letter-spacing: -.015em;
+    padding-top: 1.5rem; border-top: 1px solid var(--line);
+  }
+  h3 { font-size: 1rem; margin: 2rem 0 .5rem; letter-spacing: -.01em; }
+  p { margin: .85rem 0; }
+  .lede { font-size: 1.1rem; color: var(--muted); margin: 0; }
+  .muted { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  code { background: var(--accent-soft); padding: .1em .35em; border-radius: 4px; }
+  pre {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1rem 1.1rem; overflow-x: auto; font-family: var(--mono);
+    font-size: 13px; line-height: 1.5; margin: 1rem 0;
+  }
+  pre code { background: none; padding: 0; }
+  figure { margin: 1.75rem 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--muted); font-size: .85rem; margin-top: .6rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 1.25rem 0; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: .85rem 1.1rem; border-radius: 0 8px 8px 0; margin: 1.5rem 0;
+  }
+  .note strong { display: block; margin-bottom: .2rem; }
+  .scroll { overflow-x: auto; }
+  ul { padding-left: 1.25rem; }
+  li { margin: .35rem 0; }
+  .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: .5rem; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 3px; margin-right: .4rem; vertical-align: baseline;
+  }
+  .legend .dense::before { background: var(--accent); }
+  .legend .sparse::before { background: var(--sparse); }
+  .legend .store::before { background: var(--muted); }
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .box { fill: var(--panel); stroke: var(--line); }
+  .box-dense { fill: var(--accent-soft); stroke: var(--accent); }
+  .box-sparse { fill: var(--sparse-soft); stroke: var(--sparse); }
+  .t { fill: var(--ink); font-size: 13px; }
+  .t-sm { fill: var(--muted); font-size: 11px; }
+  .t-hd { fill: var(--ink); font-size: 13px; font-weight: 600; }
+  .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <h1>Changelog</h1>
+  <p class="lede">
+    What changed in the intent classifier, newest first, and why.
+  </p>
+  <p class="muted" style="font-size:.85rem;margin-top:.75rem">
+    Entries record the decision behind a change, not just its name. Where a number appears it was
+    measured on the held-out evaluation set, not estimated.
+    <a href="architecture.html">Architecture</a> &middot;
+    <a href="api-documentation.html">API reference</a>
+  </p>
+</header>
+
+<h2 id="unreleased">Unreleased</h2>
+<p class="muted">Documentation layout and the changelog itself.</p>
+<ul>
+  <li><strong>Documentation moved to <code>docs/</code>.</strong> The architecture note and the
+  generated API reference now live together rather than scattered at the repository root. The
+  generator, the <code>/ui/api</code> route, the Docker image and the freshness test all follow
+  the new path. <code>README.md</code> stays at the root: it is the file people and tooling look
+  for there, and <code>pyproject.toml</code> declares it as the project readme, so moving it would
+  break the package build.</li>
+  <li><strong>This changelog</strong>, served at <code>/ui/changelog</code> and linked from the
+  navigation.</li>
+</ul>
+
+<h2 id="mcp">MCP tools, per-query strategy, and a UI pass</h2>
+<p class="muted">Commit <code>7974177</code></p>
+
+<h3>An intent can be wired to an MCP tool</h3>
+<p>
+  A registry of Model Context Protocol tools, stored in the same database as everything else. A
+  tool is registered by hand or imported from a server's <code>tools/list</code> response, and a
+  bound intent makes every classification report the exact call that would satisfy it: server,
+  tool, transport, endpoint, and the arguments mapped from the extracted entities.
+</p>
+<p>
+  Arguments are matched against <em>the tool's</em> JSON Schema rather than the intent's, because
+  they are not the same contract. Anything the tool does not declare is reported as unmapped
+  instead of being sent, a missing required argument leaves the call not ready, and a binding
+  whose tool was deleted reports that plainly rather than quietly losing the call a caller was
+  waiting for.
+</p>
+<div class="note">
+  <strong>Nothing is executed, and that is a seam rather than a wall.</strong>
+  The service resolves and reports the call; the caller makes it, because the caller owns the
+  credentials and the blast radius. Real invocation is one protocol implementation away, and the
+  default refuses every call, so adding a client cannot surprise anyone with something already
+  having run.
+</div>
+
+<h3>Choosing a retrieval strategy per query</h3>
+<p>
+  <code>DEFAULT_STRATEGY=auto</code> answers with hybrid fusion and falls back to the alternates
+  only when hybrid cannot place a query, reporting which one resolved it. Two rules keep that from
+  becoming a way to say yes to everything. Both came from measurement after the first attempt got
+  it wrong.
+</p>
+<table>
+  <thead><tr><th>Rule</th><th>What went wrong without it</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Fallbacks must use dense retrieval</td>
+      <td>A lexical-only pass cannot apply the minimum-similarity floor. On a single shared word it
+      matched "what is the weather today" to <code>CONTRACT_EXPIRY</code> at 0.86 confidence.</td>
+    </tr>
+    <tr>
+      <td>A rescue must clear the threshold plus a margin</td>
+      <td>Without one, accuracy rose while UNKNOWN detection fell from 90% to 70%. For a system
+      that routes to tools, that trade means confidently calling the wrong one.</td>
+    </tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th>Strategy</th><th>Top-1</th><th>UNKNOWN detection</th><th>Valid queries refused</th></tr></thead>
+  <tbody>
+    <tr><td>hybrid_rrf (default)</td><td>90.6%</td><td>90%</td><td>3.1%</td></tr>
+    <tr><td>auto, no margin</td><td>93.8%</td><td>70%</td><td>0%</td></tr>
+    <tr><td>auto, margin 0.10</td><td>93.8%</td><td>90%</td><td>0%</td></tr>
+  </tbody>
+</table>
+<p>
+  With the margin, auto beat hybrid on every measure. That is 42 cases: enough to choose a margin,
+  not enough to change a default, so hybrid still ships as the default.
+</p>
+
+<h3>Domains state the role the assistant should adopt</h3>
+<p>
+  Generated system instructions now open with the role the domain implies, because how to act is
+  the first thing the extractor needs to know. Contractual work gets a contracts and legal
+  analyst; carts and checkout get an e-commerce shopping assistant. The same sentence means
+  different things to each.
+</p>
+
+<h3>Interface</h3>
+<ul>
+  <li>Pages for the MCP registry, every intent across domains, and recent conversations.</li>
+  <li>Navigation marks the current page; index health and the audit feed refresh on a timer.</li>
+  <li>Flash messages became toasts, so a message no longer pushes the page down as you work.</li>
+  <li>Confidence is colour-coded: green above 80, amber 50 to 80, red below 50, with a
+  plain-language note, so the colour and the number say the same thing.</li>
+</ul>
+
+<h3>Fixed</h3>
+<ul>
+  <li><strong>Updating an intent's tool mapping corrupted the record.</strong> Pydantic's
+  <code>model_copy</code> does not re-validate, so a nested tool supplied as a dictionary was
+  stored unvalidated and every later read of that intent failed, including both UI pages and tool
+  routing. It was unreachable from the tests because none of them updated a tool.</li>
+  <li>The MCP read model shadowed a parent property, warning on every import. It is a computed
+  field now.</li>
+</ul>
+
+<h2 id="docker">Docker build and first-run experience</h2>
+<p class="muted">Commits <code>c1e9144</code>, <code>2222c41</code></p>
+<ul>
+  <li><strong>The image did not build.</strong> <code>pyproject.toml</code> declares
+  <code>README.md</code> as the project readme and the build backend validates that the file
+  exists, but it was never copied in. Copying it fixed the build.</li>
+  <li><strong>Rebuilds re-downloaded the embedding model.</strong> The 67 MB bake sat below the
+  source copy, so editing one line invalidated it. Moving it above turned a rebuild into one
+  second.</li>
+  <li><strong>A fresh clone could not start.</strong> Compose required a <code>.env</code> that is
+  gitignored, so it failed before running. It is optional now, and the application's own defaults
+  apply.</li>
+  <li><strong>Seeding through <code>docker compose exec</code> broke the running server.</strong>
+  Embedded Chroma is single-writer: the write succeeded, but the server kept its own view and
+  failed to read the new vectors until restarted. <code>SEED_ON_STARTUP</code> seeds in the
+  server's own process instead, and the documented quickstart is now one command.</li>
+  <li><strong>The test suite aborted about one run in eight</strong> with a native crash in
+  Chroma's Rust bindings during interpreter shutdown. Pinning <code>chromadb==1.5.2</code> and
+  leaving before finalization made twelve consecutive runs clean, with the result summary and exit
+  code preserved.</li>
+</ul>
+
+<h2 id="generation">Generated configuration</h2>
+<p class="muted">Commit <code>b048bca</code></p>
+<ul>
+  <li><strong>Domain instructions can be drafted by the LLM</strong> from a name and a one-line
+  description, then refined by hand. An administrator knows their domain, not prompt
+  engineering.</li>
+  <li><strong>Intents too, in auto mode</strong>, each with a tool mapping, entity schema and
+  training examples. Generating the examples alongside is what makes the difference: retrieval
+  matches against examples, so an intent without them can never be returned, and a catalogue of
+  example-less intents would classify nothing.</li>
+  <li>Generated configuration is ordinary configuration. It lands in the same collections as
+  hand-written entries and is edited through the same endpoints and screens. Existing names are
+  skipped rather than overwritten, so running auto mode twice extends the catalogue instead of
+  destroying work.</li>
+  <li>Model output is treated as untrusted input throughout: names coerced to the pattern the
+  model enforces, schemas filtered to declared types, examples deduplicated the way the index
+  would, and anything unusable reported rather than saved.</li>
+  <li>An offline rule-based provider (<code>LLM_PROVIDER=mock</code>) answers every generation
+  task, so the whole flow runs and is tested without an API key.</li>
+</ul>
+
+<h2 id="sessions">Multi-turn conversations</h2>
+<p class="muted">Commits <code>1032530</code>, <code>9480820</code></p>
+<ul>
+  <li>Turns sharing a session id inform each other. A follow-up that cannot stand alone is retried
+  with the previous question, and the contextual result is kept only if it actually resolves, so
+  context can rescue a turn but never overrule a confident answer.</li>
+  <li>Entities named earlier carry into a later intent that declares the same entity, and only
+  that intent, so nothing leaks into a tool with no use for it.</li>
+  <li>Conversations live in the same store as the catalogue, with a per-session size cap and a
+  time limit.</li>
+</ul>
+
+<h2 id="hardening">Entity extraction, tool routing, and hardening</h2>
+<p class="muted">Commit <code>6a21de2</code></p>
+<ul>
+  <li>Entity extraction, running only after a confident match and never for UNKNOWN, because
+  pulling arguments out of a request the system did not understand produces confident
+  nonsense.</li>
+  <li>Tool routing that reports the call and its validated arguments without making it.</li>
+  <li>API-key authentication with nested scopes and a per-key domain boundary; Prometheus metrics;
+  an append-only audit log that does not record query text unless asked; request ids threaded
+  through responses, logs and traces; optional OpenTelemetry.</li>
+  <li>Six named retrieval strategies with deterministic assignment, and an evaluation dashboard
+  that runs the held-out set against the live catalogue.</li>
+</ul>
+
+<h2 id="core">The classifier</h2>
+<p class="muted">Commits <code>b8d1867</code>, <code>c2b39af</code></p>
+<ul>
+  <li>Domain-aware intent classification: dense retrieval over FastEmbed vectors in Chroma and
+  BM25 lexical retrieval, fused with Reciprocal Rank Fusion, aggregated from examples into
+  intents, then scored for confidence.</li>
+  <li>UNKNOWN when nothing is close enough, which matters most: a wrong intent in an agentic
+  system means calling the wrong tool.</li>
+  <li>A management interface and a playground that shows every stage of the pipeline, a seeded
+  demo catalogue, and an evaluation harness with threshold sweeping.</li>
+</ul>
+
+<p class="muted" style="margin-top:3rem;font-size:.85rem">
+  Adding an intent never requires retraining a model. That is the property the whole design
+  protects.
+</p>
+</div>
+
+</body>
+</html>

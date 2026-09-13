@@ -20,8 +20,10 @@ POST /api/v1/classify
 Adding an intent means adding example phrasings. There is no model training
 step, and no fine-tuning when the catalogue changes.
 
-Open [architecture.html](architecture.html) for the design, and
-[api-documentation.html](api-documentation.html) for the API reference. Both open
+Open [docs/architecture.html](docs/architecture.html) for the design,
+[docs/api-documentation.html](docs/api-documentation.html) for the API
+reference, and [docs/changelog.html](docs/changelog.html) for what changed and
+why. All open
 straight from the repository; the running app also serves Swagger UI at `/docs`.
 
 ## The problem
@@ -405,6 +407,30 @@ decline.
 Single-retriever variants are scored against their own ceiling rather than
 penalised for evidence they were never configured to collect.
 
+## Documentation
+
+Everything a reader opens lives in `docs/`, and the app serves it too.
+
+| File | Route | What it is |
+|---|---|---|
+| `docs/architecture.html` | — | the design, the pipeline, and the decisions behind it |
+| `docs/api-documentation.html` | `/ui/api` | the API reference, generated from the live schema |
+| `docs/changelog.html` | `/ui/changelog`, `/changelog` | what changed and why |
+| `README.md` | — | setup, configuration, and how to run it |
+
+`README.md` stays at the repository root rather than moving into `docs/`:
+`pyproject.toml` declares it as the project readme and the build backend
+validates that it is there, so the package will not build without it.
+
+The API reference is generated, never hand-edited:
+
+```bash
+uv run python -m scripts.build_api_docs          # regenerate
+uv run python -m scripts.build_api_docs --check  # fail if stale
+```
+
+A test runs that check, so the reference cannot drift from the code.
+
 ## Quickstart (Docker)
 
 ```bash
@@ -465,6 +491,7 @@ embedding model (~67 MB) into `./data/models`.
 | `/ui/intents` | every intent across every domain, and what it is wired to |
 | `/ui/mcp` | the MCP tool registry; `/ui/mcp/{id}` for one tool |
 | `/ui/sessions` | recent conversations, auto-refreshing |
+| `/ui/changelog` | what changed and why, also at `/changelog` |
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
 | `/ui/operations` | index health, configuration in force, recent activity |
 | `/ui/api` | the generated API reference |
@@ -486,7 +513,7 @@ Four surfaces, all served by the running app:
 | `/redoc` | ReDoc rendering of the same schema |
 | `/openapi.json` | the OpenAPI 3.1 schema, for client generation |
 
-[api-documentation.html](api-documentation.html) is the same page as `/ui/api`
+[docs/api-documentation.html](docs/api-documentation.html) is the same page as `/ui/api`
 and opens straight from the repository. It is **generated from the live schema**,
 so it cannot drift:
 

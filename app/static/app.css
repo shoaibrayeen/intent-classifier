@@ -168,13 +168,33 @@ pre.mono { background: var(--bg); padding: 0.7rem; border-radius: 8px; overflow-
 }
 .examples li:last-child { border-bottom: none; }
 
-.result-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.result-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem 1.5rem; }
+/* Grid items default to min-width:auto, so a long intent name refused to
+   shrink and ran over the column beside it. */
+.result-head > div { min-width: 0; }
 .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-.result-intent { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.01em; }
+.result-intent {
+  font-size: 1.35rem; font-weight: 650; letter-spacing: -0.01em;
+  /* Intent names are long and underscore-joined, which browsers do not break. */
+  overflow-wrap: anywhere; line-height: 1.25;
+}
 .result-intent.unknown { color: var(--warn); }
 .result-confidence { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
 .confidence-bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; margin-top: 0.3rem; }
 .confidence-bar span { display: block; height: 100%; background: var(--accent); }
+
+/* A dot carries the same band as a colour, for values in a table where a bar
+   would not fit. Paired with the number, never replacing it: colour alone is
+   not readable to everyone. */
+.dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  margin-right: 0.45rem; vertical-align: 0.05em; flex: none;
+}
+.dot.high { background: var(--accent); }
+.dot.medium { background: var(--warn); }
+.dot.low { background: var(--danger); }
+td .dot { margin-right: 0.4rem; }
+.dot-cell { display: inline-flex; align-items: center; }
 
 /* Confidence bands. Green above 80, amber 50-80, red below 50, so the number
    and the colour say the same thing rather than contradicting each other. */

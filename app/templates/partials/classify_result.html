@@ -9,7 +9,7 @@
     </div>
     <div>
       <div class="label">Confidence</div>
-      {% set band = "high" if result.confidence >= 0.8 else ("medium" if result.confidence >= 0.5 else "low") %}
+      {% set band = result.confidence | band %}
       <div class="result-confidence {{ band }}">{{ result.confidence | pct }}</div>
       <div class="confidence-bar {{ band }}"><span style="width: {{ (result.confidence * 100) | round(0) }}%"></span></div>
       <div class="muted small">
@@ -139,28 +139,49 @@
 <section class="card">
   <h2>Confidence breakdown</h2>
   {% set breakdown = debug.confidence_breakdown %}
+  <p class="muted small">
+    Each signal is banded the same way as the headline: green above 80%, amber 50 to 80%, red below.
+  </p>
   <table>
     <thead><tr><th>Signal</th><th class="num">Value</th><th>Meaning</th></tr></thead>
     <tbody>
-      <tr><td>s_dense</td><td class="num">{{ breakdown.s_dense | num(3) }}</td><td class="muted">best cosine similarity, rescaled</td></tr>
-      <tr><td>s_rrf</td><td class="num">{{ breakdown.s_rrf | num(3) }}</td><td class="muted">aggregated fusion score against its ceiling</td></tr>
-      <tr><td>s_margin</td><td class="num">{{ breakdown.s_margin | num(3) }}</td><td class="muted">lead over the runner-up intent</td></tr>
-      <tr><td>s_support</td><td class="num">{{ breakdown.s_support | num(3) }}</td><td class="muted">number of examples backing the top intent</td></tr>
-      <tr><td>best similarity</td><td class="num">{{ breakdown.best_similarity | num(3) }}</td><td class="muted">floor for UNKNOWN is {{ settings.min_dense_similarity }}</td></tr>
+      {% for signal, value, meaning in [
+        ("s_dense", breakdown.s_dense, "best cosine similarity, rescaled"),
+        ("s_rrf", breakdown.s_rrf, "aggregated fusion score against its ceiling"),
+        ("s_margin", breakdown.s_margin, "lead over the runner-up intent"),
+        ("s_support", breakdown.s_support, "number of examples backing the top intent"),
+        ("best similarity", breakdown.best_similarity,
+         "floor for UNKNOWN is " ~ settings.min_dense_similarity),
+      ] %}
+      <tr>
+        <td><span class="dot-cell"><span class="dot {{ value | band }}"></span>{{ signal }}</span></td>
+        <td class="num">{{ value | num(3) }}</td>
+        <td class="muted">{{ meaning }}</td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </section>
 
 <section class="card">
   <h2>Ranked intents after fusion</h2>
+  <p class="muted small">
+    The dot bands each intent by its best similarity: green above 80%, amber 50 to 80%, red below.
+    A zero means that intent was found by lexical matching only, with no semantic support.
+  </p>
   <table>
     <thead><tr><th>#</th><th>Intent</th><th class="num">Score</th><th class="num">Supporting examples</th><th class="num">Best similarity</th></tr></thead>
     <tbody>
       {% for item in debug.rrf_intents %}
-      <tr><td class="num">{{ loop.index }}</td><td>{{ item.intent }}</td><td class="num">{{ item.score | num(5) }}</td>
-          <td class="num">{{ item.supporting_examples }}</td><td class="num">{{ item.best_similarity | num(3) }}</td></tr>
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><span class="dot-cell"><span class="dot {{ item.best_similarity | band }}"></span>{{ item.intent }}</span></td>
+        <td class="num">{{ item.score | num(5) }}</td>
+        <td class="num">{{ item.supporting_examples }}</td>
+        <td class="num">{{ item.best_similarity | num(3) }}</td>
+      </tr>
       {% else %}
-      <tr><td colspan="5" class="muted">Nothing retrieved.</td></tr>
+      <tr><td colspan="5" class="empty">Nothing retrieved.</td></tr>
       {% endfor %}
     </tbody>
   </table>

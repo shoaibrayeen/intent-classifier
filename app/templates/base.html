@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Intent Classifier{% endblock %}</title>
-  <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/vendor/htmx.min.js" defer></script>
+  <link rel="stylesheet" href="{{ asset('app.css') }}">
+  <script src="{{ asset('vendor/htmx.min.js') }}" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -21,6 +21,7 @@
         ("/ui/evaluation", "Evaluation", "/ui/evaluation"),
         ("/ui/operations", "Operations", "/ui/operations"),
         ("/ui/api", "API", "/ui/api"),
+        ("/ui/changelog", "Changelog", "/ui/changelog"),
       ] %}
       <a href="{{ href }}"
          class="{% if path == href or (match != '/' and path.startswith(match)) %}active{% endif %}">{{ label }}</a>

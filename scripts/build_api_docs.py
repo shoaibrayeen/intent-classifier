@@ -1,4 +1,4 @@
-"""Generate api-documentation.html from the live OpenAPI schema.
+"""Generate docs/api-documentation.html from the live OpenAPI schema.
 
 The reference is generated rather than written by hand so it cannot drift from
 the code: every endpoint, parameter and field comes from the app itself. The
@@ -20,7 +20,8 @@ from typing import Any
 from app.config import Settings
 from app.main import create_app
 
-OUTPUT = Path(__file__).resolve().parents[1] / "api-documentation.html"
+DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
+OUTPUT = DOCS_DIR / "api-documentation.html"
 
 METHOD_ORDER = ["get", "post", "put", "patch", "delete"]
 

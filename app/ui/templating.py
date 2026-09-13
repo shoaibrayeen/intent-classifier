@@ -10,8 +10,24 @@ from typing import Any
 from fastapi.templating import Jinja2Templates
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def asset(path: str) -> str:
+    """A versioned URL for a static file.
+
+    Browsers cache /static/app.css aggressively, so a stylesheet change after a
+    deploy would otherwise not reach anyone who had already loaded the page.
+    Stamping the file's modification time makes a changed file a new URL.
+    """
+    url = f"/static/{path}"
+    try:
+        stamp = int((STATIC_DIR / path).stat().st_mtime)
+    except OSError:
+        return url
+    return f"{url}?v={stamp}"
 
 
 def pct(value: float | None) -> str:
@@ -32,6 +48,21 @@ def json_pretty(value: Any) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False)
 
 
+#: One definition of the confidence bands, used everywhere they are shown:
+#: green above 0.8, amber 0.5 to 0.8, red below. Keeping it here means the dot
+#: in a table and the number beside it can never disagree.
+HIGH_BAND = 0.8
+MEDIUM_BAND = 0.5
+
+
+def band(value: float | None) -> str:
+    if value is None:
+        return "low"
+    if value >= HIGH_BAND:
+        return "high"
+    return "medium" if value >= MEDIUM_BAND else "low"
+
+
 def ts(value: float | None) -> str:
     if not value:
         return "-"
@@ -42,3 +73,5 @@ templates.env.filters["pct"] = pct
 templates.env.filters["num"] = num
 templates.env.filters["json_pretty"] = json_pretty
 templates.env.filters["ts"] = ts
+templates.env.filters["band"] = band
+templates.env.globals["asset"] = asset
