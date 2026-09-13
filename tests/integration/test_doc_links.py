@@ -86,3 +86,11 @@ def test_the_navigation_offers_every_reference_page(client):
 def test_the_demo_assets_are_served(client):
     assert client.get("/ui/docs/demo.gif").status_code == 200
     assert client.get("/ui/docs/demo-run.json").status_code == 200
+
+
+def test_the_plural_domains_path_reaches_the_dashboard(client):
+    """It answered 405 before: only the create handler was bound to that path."""
+    response = client.get("/ui/domains", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/"
+    assert client.get("/ui/domains").status_code == 200

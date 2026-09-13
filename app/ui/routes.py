@@ -224,6 +224,16 @@ for _path, _filename in DOC_ALIASES.items():
     )
 
 
+@router.get("/ui/domains", include_in_schema=False)
+def domains_index() -> RedirectResponse:
+    """The dashboard lists domains, and /ui/domains is where people try first.
+
+    Without this it answered 405, because only the create handler was bound to
+    that path.
+    """
+    return RedirectResponse("/", status_code=307)
+
+
 @router.get("/ui/{name}.html", include_in_schema=False)
 def doc_by_filename(name: str) -> RedirectResponse:
     """Forgive /ui/architecture.html, which is where the links used to point."""
