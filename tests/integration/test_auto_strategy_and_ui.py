@@ -264,3 +264,37 @@ def test_the_api_reference_still_resolves_from_its_new_home(client):
     response = client.get("/ui/api")
     assert response.status_code == 200
     assert "Intent Classifier" in response.text
+
+
+# -------------------------------------------------------------- result layout
+def test_the_debug_tables_carry_banded_dots(app_factory):
+    """Colour appears beside the number, never instead of it."""
+    _, client = app_factory({"llm_provider": "mock"})
+    seed_contract_domain(client)
+
+    rendered = client.post(
+        "/ui/playground/classify",
+        data={"domain": "contract", "text": "Find all contracts with Microsoft"},
+        headers={"HX-Request": "true"},
+    ).text
+
+    # One dot per confidence signal, plus one per ranked intent.
+    assert rendered.count('class="dot ') >= 6
+    assert "Confidence breakdown" in rendered and "Ranked intents after fusion" in rendered
+    # The values are still printed, not replaced by colour.
+    assert "s_dense" in rendered and "best similarity" in rendered
+
+
+def test_a_long_intent_name_is_allowed_to_wrap(app_factory):
+    """A long underscore-joined name used to run over the confidence beside it."""
+    css = (
+        __import__("pathlib").Path(__file__).resolve().parents[2] / "app/static/app.css"
+    ).read_text()
+    assert "overflow-wrap: anywhere" in css
+    # Grid items default to min-width:auto, which is what stopped it shrinking.
+    assert ".result-head > div { min-width: 0; }" in css
+
+
+def test_the_stylesheet_is_requested_with_a_version(client):
+    page = client.get("/ui/playground").text
+    assert "/static/app.css?v=" in page

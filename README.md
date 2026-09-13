@@ -492,6 +492,12 @@ embedding model (~67 MB) into `./data/models`.
 | `/ui/mcp` | the MCP tool registry; `/ui/mcp/{id}` for one tool |
 | `/ui/sessions` | recent conversations, auto-refreshing |
 | `/ui/changelog` | what changed and why, also at `/changelog` |
+
+Confidence is banded the same way everywhere it is shown: green above 80%,
+amber 50 to 80%, red below. The playground puts a dot on every confidence
+signal and every ranked intent, always beside the number rather than instead of
+it. Static assets are served with a version stamp, so a stylesheet change
+reaches a browser that already cached the old one.
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
 | `/ui/operations` | index health, configuration in force, recent activity |
 | `/ui/api` | the generated API reference |

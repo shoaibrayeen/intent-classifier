@@ -93,7 +93,31 @@
 </header>
 
 <h2 id="unreleased">Unreleased</h2>
-<p class="muted">Documentation layout and the changelog itself.</p>
+<p class="muted">Documentation layout, the changelog itself, and playground fixes.</p>
+
+<h3>Fixed in the playground</h3>
+<ul>
+  <li><strong>A long intent name overlapped the confidence beside it.</strong> Grid items default
+  to <code>min-width: auto</code>, so the name refused to shrink below its own width and ran into
+  the next column; underscore-joined names do not break on their own either. The cell may now
+  shrink and the name wraps.</li>
+  <li><strong>A cached stylesheet survived a deploy.</strong> Browsers held the old
+  <code>app.css</code>, so a style change was simply invisible until a hard refresh. Static assets
+  are now requested with the file's modification time, making a changed file a new URL. This was
+  found the honest way: the dots below were correct in the file and absent on screen.</li>
+</ul>
+
+<h3>Confidence at a glance</h3>
+<ul>
+  <li>The confidence breakdown and the ranked intents each carry a coloured dot: green above 80%,
+  amber 50 to 80%, red below. Ranked intents are banded by best similarity, so a lexical-only hit
+  with no semantic support reads as red rather than looking like a near miss.</li>
+  <li>The thresholds live in one filter, so a dot in a table and the headline number cannot drift
+  apart. The dot sits beside the value and never replaces it, because colour alone is not readable
+  to everyone.</li>
+</ul>
+
+<h3>Documentation</h3>
 <ul>
   <li><strong>Documentation moved to <code>docs/</code>.</strong> The architecture note and the
   generated API reference now live together rather than scattered at the repository root. The
