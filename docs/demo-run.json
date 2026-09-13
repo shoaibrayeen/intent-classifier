@@ -1,0 +1,885 @@
+{
+ "steps": [
+  {
+   "domain": "contract",
+   "session": "demo-contracts",
+   "query": "Find all active contracts with Microsoft",
+   "note": "A plain question. Entities are extracted and mapped onto the MCP tool's arguments.",
+   "intent": "CONTRACT_SEARCH",
+   "confidence": 0.8404,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 14.393,
+   "entities": {
+    "counterparty": "Microsoft",
+    "status": "ACTIVE"
+   },
+   "tool": {
+    "name": "search_contracts",
+    "version": "v1",
+    "arguments": {
+     "counterparty": "Microsoft",
+     "status": "ACTIVE"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "03a7bd02954649688a24cc9e6eca37ec",
+     "server": "contracts",
+     "tool": "search_contracts",
+     "qualified_name": "mcp__contracts__search_contracts",
+     "description": "Search contracts by counterparty and status",
+     "transport": "stdio",
+     "endpoint": "npx -y @acme/contracts-mcp",
+     "arguments": {
+      "counterparty": "Microsoft",
+      "status": "ACTIVE"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "context": {
+    "session_id": "demo-contracts",
+    "turn": 1,
+    "previous_turns": 0,
+    "previous_intent": null,
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.9902,
+    "s_margin": 0.3714,
+    "s_support": 1.0,
+    "confidence": 0.8404,
+    "agg_top": 0.095843,
+    "agg_second": 0.060249,
+    "best_similarity": 0.942357
+   },
+   "top_intents": [
+    {
+     "intent": "CONTRACT_SEARCH",
+     "intent_id": "bd774b65bef6413bb6f9cd493ac61fca",
+     "score": 0.095843,
+     "supporting_examples": 6,
+     "best_similarity": 0.942357
+    },
+    {
+     "intent": "CONTRACT_EXPIRY",
+     "intent_id": "2139b3c418f24c2783aa10c7278d2fd4",
+     "score": 0.060249,
+     "supporting_examples": 3,
+     "best_similarity": 0.743307
+    },
+    {
+     "intent": "CONTRACT_COMPARE",
+     "intent_id": "852bd22e32da4f329f69d157bb64102f",
+     "score": 0.045502,
+     "supporting_examples": 2,
+     "best_similarity": 0.754677
+    },
+    {
+     "intent": "CONTRACT_SUMMARY",
+     "intent_id": "7ca5e645156342c1996395d45a5a2570",
+     "score": 0.028992,
+     "supporting_examples": 2,
+     "best_similarity": 0.715476
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "Find all contracts with Microsoft",
+     "intent": "CONTRACT_SEARCH",
+     "score": 0.942357
+    },
+    {
+     "text": "Give me all active contracts",
+     "intent": "CONTRACT_SEARCH",
+     "score": 0.855186
+    },
+    {
+     "text": "Show me Microsoft agreements",
+     "intent": "CONTRACT_SEARCH",
+     "score": 0.806915
+    },
+    {
+     "text": "Compare the Microsoft and Oracle contracts",
+     "intent": "CONTRACT_COMPARE",
+     "score": 0.754677
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "Find all contracts with Microsoft",
+     "intent": "CONTRACT_SEARCH",
+     "score": 9.18938
+    },
+    {
+     "text": "Give me all active contracts",
+     "intent": "CONTRACT_SEARCH",
+     "score": 6.307883
+    },
+    {
+     "text": "Find agreements that terminate in 2026",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 2.427997
+    },
+    {
+     "text": "Which contracts do we have with Salesforce?",
+     "intent": "CONTRACT_SEARCH",
+     "score": 2.027787
+    }
+   ]
+  },
+  {
+   "domain": "contract",
+   "session": "demo-contracts",
+   "query": "which of them expire next month",
+   "note": "A follow-up. 'them' refers back, and this one still resolves on its own.",
+   "intent": "CONTRACT_EXPIRY",
+   "confidence": 0.8306,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 14.373,
+   "entities": {
+    "counterparty": "Microsoft"
+   },
+   "tool": {
+    "name": "get_expiring_contracts",
+    "version": "v1",
+    "arguments": {
+     "counterparty": "Microsoft"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "a9e3b7f4c83e4fcd93ed2f3f30afffe0",
+     "server": "contracts",
+     "tool": "get_expiring_contracts",
+     "qualified_name": "mcp__contracts__get_expiring_contracts",
+     "description": "Contracts expiring in a window",
+     "transport": "stdio",
+     "endpoint": "npx -y @acme/contracts-mcp",
+     "arguments": {
+      "counterparty": "Microsoft"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "context": {
+    "session_id": "demo-contracts",
+    "turn": 2,
+    "previous_turns": 1,
+    "previous_intent": "CONTRACT_SEARCH",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": [
+     "counterparty"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 0.8517,
+    "s_rrf": 0.995,
+    "s_margin": 0.535,
+    "s_support": 1.0,
+    "confidence": 0.8306,
+    "agg_top": 0.096303,
+    "agg_second": 0.044783,
+    "best_similarity": 0.840689
+   },
+   "top_intents": [
+    {
+     "intent": "CONTRACT_EXPIRY",
+     "intent_id": "2139b3c418f24c2783aa10c7278d2fd4",
+     "score": 0.096303,
+     "supporting_examples": 7,
+     "best_similarity": 0.840689
+    },
+    {
+     "intent": "CONTRACT_SUMMARY",
+     "intent_id": "7ca5e645156342c1996395d45a5a2570",
+     "score": 0.044783,
+     "supporting_examples": 3,
+     "best_similarity": 0.0
+    },
+    {
+     "intent": "CONTRACT_SEARCH",
+     "intent_id": "bd774b65bef6413bb6f9cd493ac61fca",
+     "score": 0.030118,
+     "supporting_examples": 2,
+     "best_similarity": 0.63335
+    },
+    {
+     "intent": "CONTRACT_COMPARE",
+     "intent_id": "852bd22e32da4f329f69d157bb64102f",
+     "score": 0.028992,
+     "supporting_examples": 2,
+     "best_similarity": 0.657305
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "Show agreements expiring next month",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.840689
+    },
+    {
+     "text": "Which contracts expire this year?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.782733
+    },
+    {
+     "text": "Contracts expiring in the next 90 days",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.737259
+    },
+    {
+     "text": "Find agreements that terminate in 2026",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.706771
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "Show agreements expiring next month",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 5.84239
+    },
+    {
+     "text": "Which contracts expire this year?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 5.234969
+    },
+    {
+     "text": "When does the Microsoft contract expire?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 2.427997
+    },
+    {
+     "text": "Which contracts do we have with Salesforce?",
+     "intent": "CONTRACT_SEARCH",
+     "score": 2.264093
+    }
+   ]
+  },
+  {
+   "domain": "contract",
+   "session": "demo-contracts",
+   "query": "and for Oracle",
+   "note": "Three words with no anchor. Alone it is UNKNOWN; read against the previous question it resolves, and the new counterparty wins over the carried one.",
+   "intent": "CONTRACT_EXPIRY",
+   "confidence": 0.7621,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 25.621,
+   "entities": {
+    "period": "Oracle",
+    "counterparty": "Microsoft"
+   },
+   "tool": {
+    "name": "get_expiring_contracts",
+    "version": "v1",
+    "arguments": {
+     "period": "Oracle",
+     "counterparty": "Microsoft"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "a9e3b7f4c83e4fcd93ed2f3f30afffe0",
+     "server": "contracts",
+     "tool": "get_expiring_contracts",
+     "qualified_name": "mcp__contracts__get_expiring_contracts",
+     "description": "Contracts expiring in a window",
+     "transport": "stdio",
+     "endpoint": "npx -y @acme/contracts-mcp",
+     "arguments": {
+      "period": "Oracle",
+      "counterparty": "Microsoft"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "context": {
+    "session_id": "demo-contracts",
+    "turn": 3,
+    "previous_turns": 2,
+    "previous_intent": "CONTRACT_EXPIRY",
+    "used_for_retrieval": true,
+    "retrieval_text": "which of them expire next month and for Oracle",
+    "carried_entities": [
+     "counterparty"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 0.7654,
+    "s_rrf": 0.9949,
+    "s_margin": 0.382,
+    "s_support": 1.0,
+    "confidence": 0.7621,
+    "agg_top": 0.096295,
+    "agg_second": 0.059509,
+    "best_similarity": 0.806164
+   },
+   "top_intents": [
+    {
+     "intent": "CONTRACT_EXPIRY",
+     "intent_id": "2139b3c418f24c2783aa10c7278d2fd4",
+     "score": 0.096295,
+     "supporting_examples": 7,
+     "best_similarity": 0.806164
+    },
+    {
+     "intent": "CONTRACT_SEARCH",
+     "intent_id": "bd774b65bef6413bb6f9cd493ac61fca",
+     "score": 0.059509,
+     "supporting_examples": 4,
+     "best_similarity": 0.666988
+    },
+    {
+     "intent": "CONTRACT_COMPARE",
+     "intent_id": "852bd22e32da4f329f69d157bb64102f",
+     "score": 0.031025,
+     "supporting_examples": 1,
+     "best_similarity": 0.688878
+    },
+    {
+     "intent": "CONTRACT_SUMMARY",
+     "intent_id": "7ca5e645156342c1996395d45a5a2570",
+     "score": 0.029211,
+     "supporting_examples": 2,
+     "best_similarity": 0.684432
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "Show agreements expiring next month",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.806164
+    },
+    {
+     "text": "Which contracts expire this year?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.761367
+    },
+    {
+     "text": "Contracts expiring in the next 90 days",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.723532
+    },
+    {
+     "text": "When does the Microsoft contract expire?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.702536
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "Show agreements expiring next month",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 5.84239
+    },
+    {
+     "text": "Which contracts expire this year?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 5.234969
+    },
+    {
+     "text": "Compare the Microsoft and Oracle contracts",
+     "intent": "CONTRACT_COMPARE",
+     "score": 5.03384
+    },
+    {
+     "text": "When does the Microsoft contract expire?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 2.427997
+    }
+   ]
+  },
+  {
+   "domain": "contract",
+   "session": "demo-contracts",
+   "query": "summarize contract C-1042",
+   "note": "A different intent in the same conversation, with the contract id as its argument.",
+   "intent": "CONTRACT_SUMMARY",
+   "confidence": 0.8714,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 8.41,
+   "entities": {
+    "contract_id": "C-1042",
+    "counterparty": "Microsoft"
+   },
+   "tool": {
+    "name": "summarize_contract",
+    "version": "v1",
+    "arguments": {
+     "contract_id": "C-1042",
+     "counterparty": "Microsoft"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "97f2d21ed23441c5a50f1ac9157a2f09",
+     "server": "contracts",
+     "tool": "summarize_contract",
+     "qualified_name": "mcp__contracts__summarize_contract",
+     "description": "Summarize one contract",
+     "transport": "stdio",
+     "endpoint": "npx -y @acme/contracts-mcp",
+     "arguments": {
+      "contract_id": "C-1042"
+     },
+     "missing_required": [],
+     "unmapped": [
+      "counterparty"
+     ],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "context": {
+    "session_id": "demo-contracts",
+    "turn": 4,
+    "previous_turns": 3,
+    "previous_intent": "CONTRACT_EXPIRY",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": [
+     "counterparty"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.9794,
+    "s_margin": 0.5062,
+    "s_support": 1.0,
+    "confidence": 0.8714,
+    "agg_top": 0.094797,
+    "agg_second": 0.046808,
+    "best_similarity": 0.951771
+   },
+   "top_intents": [
+    {
+     "intent": "CONTRACT_SUMMARY",
+     "intent_id": "7ca5e645156342c1996395d45a5a2570",
+     "score": 0.094797,
+     "supporting_examples": 4,
+     "best_similarity": 0.951771
+    },
+    {
+     "intent": "CONTRACT_COMPARE",
+     "intent_id": "852bd22e32da4f329f69d157bb64102f",
+     "score": 0.046808,
+     "supporting_examples": 2,
+     "best_similarity": 0.845513
+    },
+    {
+     "intent": "CONTRACT_EXPIRY",
+     "intent_id": "2139b3c418f24c2783aa10c7278d2fd4",
+     "score": 0.044803,
+     "supporting_examples": 3,
+     "best_similarity": 0.701874
+    },
+    {
+     "intent": "CONTRACT_SEARCH",
+     "intent_id": "bd774b65bef6413bb6f9cd493ac61fca",
+     "score": 0.030536,
+     "supporting_examples": 2,
+     "best_similarity": 0.714673
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "Give me a summary of contract C-1042",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 0.951771
+    },
+    {
+     "text": "Diff contract C-1042 against C-1099",
+     "intent": "CONTRACT_COMPARE",
+     "score": 0.845513
+    },
+    {
+     "text": "Explain the main obligations in this contract",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 0.753686
+    },
+    {
+     "text": "TL;DR of the Salesforce contract",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 0.720752
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "Diff contract C-1042 against C-1099",
+     "intent": "CONTRACT_COMPARE",
+     "score": 6.929566
+    },
+    {
+     "text": "Give me a summary of contract C-1042",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 5.546494
+    },
+    {
+     "text": "Summarize the Microsoft MSA",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 3.497891
+    },
+    {
+     "text": "TL;DR of the Salesforce contract",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 1.493555
+    }
+   ]
+  },
+  {
+   "domain": "contract",
+   "session": "demo-contracts",
+   "query": "what is the weather today",
+   "note": "A change of subject. It must stay UNKNOWN rather than inheriting the last topic.",
+   "intent": "UNKNOWN",
+   "confidence": 0.3436,
+   "reason": "low_similarity",
+   "strategy": "hybrid_rrf",
+   "latency_ms": 13.793,
+   "entities": {},
+   "tool": null,
+   "context": {
+    "session_id": "demo-contracts",
+    "turn": 5,
+    "previous_turns": 4,
+    "previous_intent": "CONTRACT_SUMMARY",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 0.0814,
+    "s_rrf": 0.6463,
+    "s_margin": 0.0141,
+    "s_support": 1.0,
+    "confidence": 0.3436,
+    "agg_top": 0.062552,
+    "agg_second": 0.061672,
+    "best_similarity": 0.532561
+   },
+   "top_intents": [
+    {
+     "intent": "CONTRACT_EXPIRY",
+     "intent_id": "2139b3c418f24c2783aa10c7278d2fd4",
+     "score": 0.062552,
+     "supporting_examples": 7,
+     "best_similarity": 0.532561
+    },
+    {
+     "intent": "CONTRACT_SUMMARY",
+     "intent_id": "7ca5e645156342c1996395d45a5a2570",
+     "score": 0.061672,
+     "supporting_examples": 7,
+     "best_similarity": 0.529183
+    },
+    {
+     "intent": "CONTRACT_COMPARE",
+     "intent_id": "852bd22e32da4f329f69d157bb64102f",
+     "score": 0.047493,
+     "supporting_examples": 3,
+     "best_similarity": 0.559605
+    },
+    {
+     "intent": "CONTRACT_SEARCH",
+     "intent_id": "bd774b65bef6413bb6f9cd493ac61fca",
+     "score": 0.014493,
+     "supporting_examples": 1,
+     "best_similarity": 0.496782
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "Compare this year's MSA with last year's version",
+     "intent": "CONTRACT_COMPARE",
+     "score": 0.559605
+    },
+    {
+     "text": "List contracts ending before December",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.532561
+    },
+    {
+     "text": "Which contracts expire this year?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 0.531576
+    },
+    {
+     "text": "Give me a summary of contract C-1042",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 0.529183
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "What is different between these two agreements?",
+     "intent": "CONTRACT_COMPARE",
+     "score": 4.414646
+    },
+    {
+     "text": "What does the Deloitte SOW cover?",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 2.028318
+    },
+    {
+     "text": "What are the key terms of the Acme agreement?",
+     "intent": "CONTRACT_SUMMARY",
+     "score": 1.782479
+    },
+    {
+     "text": "What contracts are up for renewal in Q3?",
+     "intent": "CONTRACT_EXPIRY",
+     "score": 1.522372
+    }
+   ]
+  },
+  {
+   "domain": "employee",
+   "session": "demo-people",
+   "query": "how many leave days do I have left",
+   "note": "A different domain entirely, with its own intents and its own vocabulary.",
+   "intent": "EMPLOYEE_LEAVE",
+   "confidence": 0.8871,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 13.251,
+   "entities": {},
+   "tool": {
+    "name": "get_leave_balance",
+    "version": "v1",
+    "arguments": {},
+    "missing_required": [],
+    "ready": true,
+    "mcp": null
+   },
+   "context": {
+    "session_id": "demo-people",
+    "turn": 1,
+    "previous_turns": 0,
+    "previous_intent": null,
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 1.0,
+    "s_margin": 0.5485,
+    "s_support": 1.0,
+    "confidence": 0.8871,
+    "agg_top": 0.096791,
+    "agg_second": 0.043704,
+    "best_similarity": 0.989239
+   },
+   "top_intents": [
+    {
+     "intent": "EMPLOYEE_LEAVE",
+     "intent_id": "0a961ae00b394874a6aa9c1f6602afbd",
+     "score": 0.096791,
+     "supporting_examples": 6,
+     "best_similarity": 0.989239
+    },
+    {
+     "intent": "EMPLOYEE_SEARCH",
+     "intent_id": "0ca6128bafcc4a00ac1128936d9b960d",
+     "score": 0.043704,
+     "supporting_examples": 3,
+     "best_similarity": 0.606394
+    },
+    {
+     "intent": "EMPLOYEE_DETAILS",
+     "intent_id": "62edd577c97d4a4387b0111fb0c6d453",
+     "score": 0.014706,
+     "supporting_examples": 1,
+     "best_similarity": 0.591615
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "How many leave days do I have left?",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 0.989239
+    },
+    {
+     "text": "Show my leave balance",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 0.826466
+    },
+    {
+     "text": "How much parental leave am I entitled to?",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 0.765097
+    },
+    {
+     "text": "List my approved time off this quarter",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 0.728967
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "How many leave days do I have left?",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 15.334789
+    },
+    {
+     "text": "How much parental leave am I entitled to?",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 4.400912
+    },
+    {
+     "text": "Show my leave balance",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 1.398393
+    },
+    {
+     "text": "What is Rahul's remaining sick leave?",
+     "intent": "EMPLOYEE_LEAVE",
+     "score": 1.193842
+    }
+   ]
+  }
+ ],
+ "health": {
+  "status": "ok",
+  "version": "0.1.0",
+  "chroma": "ok",
+  "chroma_mode": "persistent",
+  "model": "BAAI/bge-small-en-v1.5",
+  "model_loaded": true,
+  "embedding_dimension": 384,
+  "entity_extraction": {
+   "enabled": true,
+   "provider_configured": true,
+   "provider": "mock",
+   "model": "gpt-4o"
+  },
+  "sessions_enabled": true,
+  "auth_enabled": false,
+  "tracing_enabled": false,
+  "ab_testing_enabled": false,
+  "strategy": "hybrid_rrf"
+ },
+ "index": {
+  "status": "ok",
+  "domains": [
+   {
+    "domain": "contract",
+    "domain_id": "3e18241386704ddc82c70ba0e7dd3df2",
+    "state": "ready",
+    "version": 49,
+    "built_at": "2026-09-13T10:19:27.469996+00:00",
+    "bm25_doc_count": 28,
+    "dense_count": 28,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   },
+   {
+    "domain": "employee",
+    "domain_id": "097e4319fcd84981a4f0bbf7c6c4157e",
+    "state": "ready",
+    "version": 23,
+    "built_at": "2026-09-13T10:15:30.457031+00:00",
+    "bm25_doc_count": 18,
+    "dense_count": 18,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   }
+  ]
+ },
+ "mcp_tools": [
+  {
+   "server": "contracts",
+   "name": "get_expiring_contracts",
+   "description": "Contracts expiring in a window",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "counterparty": {
+      "type": "string"
+     },
+     "period": {
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "transport": "stdio",
+   "endpoint": "npx -y @acme/contracts-mcp",
+   "status": "active",
+   "id": "a9e3b7f4c83e4fcd93ed2f3f30afffe0",
+   "created_at": 1789294551.738916,
+   "updated_at": 1789294767.416591,
+   "bound_intents": 1,
+   "qualified_name": "mcp__contracts__get_expiring_contracts"
+  },
+  {
+   "server": "contracts",
+   "name": "search_contracts",
+   "description": "Search contracts by counterparty and status",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "counterparty": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "counterparty"
+    ]
+   },
+   "transport": "stdio",
+   "endpoint": "npx -y @acme/contracts-mcp",
+   "status": "active",
+   "id": "03a7bd02954649688a24cc9e6eca37ec",
+   "created_at": 1789294551.72135,
+   "updated_at": 1789294767.409114,
+   "bound_intents": 1,
+   "qualified_name": "mcp__contracts__search_contracts"
+  },
+  {
+   "server": "contracts",
+   "name": "summarize_contract",
+   "description": "Summarize one contract",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "contract_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "contract_id"
+    ]
+   },
+   "transport": "stdio",
+   "endpoint": "npx -y @acme/contracts-mcp",
+   "status": "active",
+   "id": "97f2d21ed23441c5a50f1ac9157a2f09",
+   "created_at": 1789294551.748469,
+   "updated_at": 1789294767.42351,
+   "bound_intents": 1,
+   "qualified_name": "mcp__contracts__summarize_contract"
+  }
+ ]
+}

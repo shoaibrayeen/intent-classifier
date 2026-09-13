@@ -33,7 +33,15 @@ def test_the_documentation_lives_under_docs():
 
     docs = Path(__file__).resolve().parents[2] / "docs"
     names = {p.name for p in docs.glob("*.html")}
-    assert names == {"api-documentation.html", "architecture.html", "changelog.html"}
+    assert names == {
+        "api-documentation.html",
+        "architecture.html",
+        "changelog.html",
+        "demo.html",
+    }
+    # The demo ships its recording and its animation alongside the page.
+    assert (docs / "demo.gif").exists()
+    assert (docs / "demo-run.json").exists()
     # README.md stays at the root: pyproject declares it as the project readme,
     # so the package build fails without it there.
     assert (docs.parent / "README.md").exists()

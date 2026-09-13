@@ -5,19 +5,22 @@
   <tbody>
     {% for row in sessions %}
     <tr>
-      <td class="mono">{{ row.session_id }}</td>
+      <td class="mono"><a href="/ui/playground?session={{ row.session_id }}">{{ row.session_id }}</a></td>
       <td class="num">{{ row.turns }}</td>
-      <td>{{ row.last_text }}</td>
+      <td><a class="plain" href="/ui/playground?session={{ row.session_id }}">{{ row.last_text }}</a></td>
       <td class="mono small">{{ row.last_intent }}</td>
       <td class="mono small">{{ row.entities | json_pretty if row.entities else "—" }}</td>
       <td class="actions">
+        <a class="button-link" href="/ui/playground?session={{ row.session_id }}">Open</a>
         <button class="danger small" hx-delete="/ui/sessions/{{ row.session_id }}"
                 hx-target="#session-list" hx-swap="innerHTML"
                 hx-confirm="Forget this conversation?">Clear</button>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="empty">No conversations yet. Pass a session id from the playground.</td></tr>
+    <tr><td colspan="6" class="empty">
+      No conversations yet. Start one in the <a href="/ui/playground">playground</a>.
+    </td></tr>
     {% endfor %}
   </tbody>
 </table>

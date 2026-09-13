@@ -125,6 +125,9 @@ class SessionTurn(BaseModel):
     confidence: float = 0.0
     entities: dict[str, Any] = Field(default_factory=dict)
     created_at: float = 0.0
+    #: What the detail panel showed at the time. Recorded rather than
+    #: recomputed, so an old turn shows what actually happened then.
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class ContextInfo(BaseModel):

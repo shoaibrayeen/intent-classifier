@@ -26,6 +26,10 @@ class ChromaSessionRepository:
             entities = json.loads(str(meta.get("entities") or "{}"))
         except json.JSONDecodeError:
             entities = {}
+        try:
+            details = json.loads(str(meta.get("details") or "{}"))
+        except json.JSONDecodeError:
+            details = {}
         return SessionTurn(
             turn=int(meta.get("turn", 0)),
             text=doc,
@@ -34,6 +38,7 @@ class ChromaSessionRepository:
             confidence=float(meta.get("confidence", 0.0)),
             entities=entities if isinstance(entities, dict) else {},
             created_at=float(meta.get("created_at", 0.0)),
+            details=details if isinstance(details, dict) else {},
         )
 
     def history(self, session_id: str, domain_id: str, limit: int) -> list[SessionTurn]:
@@ -72,6 +77,7 @@ class ChromaSessionRepository:
                             "intent_id": turn.intent_id or "",
                             "confidence": turn.confidence,
                             "entities": json.dumps(turn.entities, ensure_ascii=False, default=str),
+                            "details": json.dumps(turn.details, ensure_ascii=False, default=str),
                             "principal": principal,
                             "created_at": turn.created_at or now_ts(),
                         }

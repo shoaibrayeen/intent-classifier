@@ -1,0 +1,25 @@
+<div class="chat-turn" id="turn-{{ turn.turn }}">
+  <div class="bubble user">{{ turn.text }}</div>
+  {% set band = turn.confidence | band %}
+  <button class="bubble assistant {{ 'unknown' if turn.intent == 'UNKNOWN' else '' }}"
+          hx-get="/ui/playground/details/{{ session_id }}/{{ turn.turn }}"
+          hx-target="#detail-panel" hx-swap="innerHTML"
+          title="Show the full breakdown for this turn">
+    {% if turn.intent == "UNKNOWN" %}
+      <span class="bubble-intent">No matching intent</span>
+      <span class="muted small">Nothing in this domain was close enough.</span>
+    {% else %}
+      <span class="bubble-intent">{{ turn.intent }}</span>
+      {% if turn.entities %}
+      <span class="muted small mono">{{ turn.entities | json_compact }}</span>
+      {% endif %}
+    {% endif %}
+    <span class="bubble-meta">
+      <span class="dot {{ band }}"></span>{{ turn.confidence | pct }}
+      {%- if turn.details and turn.details.tool and turn.details.tool.name %}
+      · <span class="mono">{{ turn.details.tool.name }}</span>
+      {%- endif %}
+      <span class="bubble-hint">details →</span>
+    </span>
+  </button>
+</div>

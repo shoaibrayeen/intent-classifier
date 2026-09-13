@@ -6,8 +6,15 @@ inform each other in two deliberate, inspectable ways:
 * **Contextual retrieval.** "when do they expire" cannot be classified on its
   own. If a turn comes back UNKNOWN and there is a previous turn, it is retried
   as the previous question plus the new one. The contextual result is used only
-  if it actually resolves to an intent, so context can rescue a follow-up but
-  never overrule a confident answer.
+  if it actually resolves, so context can rescue a follow-up but never overrule
+  a confident answer.
+
+  Two guards keep that from absorbing a change of subject. The retry only runs
+  for text that reads as referential -- a pronoun, or a fragment too short to
+  stand alone -- and its result must clear the threshold by a margin. Without
+  them, "what is the weather today" asked after "summarize contract C-1042"
+  came back as CONTRACT_SUMMARY, because the previous question alone was enough
+  to match the concatenation.
 * **Entity carry-over.** Values named earlier ("Microsoft") flow into a later
   intent that accepts the same entity, unless the new turn names its own. The
   response lists which entities were carried, so the caller can see it.
@@ -22,8 +29,47 @@ from app.config import Settings
 from app.models.classification import SessionTurn
 from app.models.common import now_ts
 from app.repositories.chroma_sessions import ChromaSessionRepository
+from app.services.normalizer import tokenize
 
 logger = logging.getLogger(__name__)
+
+#: Words that point at something already said. Their presence is what makes a
+#: turn a follow-up rather than a new question.
+REFERENTIAL_WORDS = frozenset(
+    {
+        "it",
+        "its",
+        "they",
+        "them",
+        "their",
+        "theirs",
+        "those",
+        "these",
+        "that",
+        "this",
+        "there",
+        "same",
+        "one",
+        "ones",
+        "another",
+        "other",
+        "others",
+        "him",
+        "her",
+        "his",
+        "hers",
+        "he",
+        "she",
+        "above",
+        "previous",
+        "earlier",
+        "instead",
+        "too",
+        "also",
+        "as",
+        "well",
+    }
+)
 
 
 class SessionService:
@@ -47,14 +93,35 @@ class SessionService:
     def next_turn_number(self, history: list[SessionTurn]) -> int:
         return (history[-1].turn + 1) if history else 1
 
+    def reads_as_followup(self, text: str) -> bool:
+        """Whether this turn points back at the conversation.
+
+        A complete question that simply does not match the domain is a change of
+        subject, not a follow-up, and must not be rescued by being glued to the
+        previous one.
+        """
+        words = tokenize(text)
+        if not words:
+            return False
+        if len(words) <= self._settings.context_followup_max_words:
+            return True
+        return bool(set(words) & REFERENTIAL_WORDS)
+
     def contextual_text(self, history: list[SessionTurn], text: str) -> str | None:
         """The previous question prepended to a follow-up, or None if nothing to add."""
         if not history or not self._settings.context_retrieval_enabled:
+            return None
+        if not self.reads_as_followup(text):
             return None
         previous = history[-1].text.strip().rstrip("?.!")
         if not previous or previous.casefold() == text.strip().casefold():
             return None
         return f"{previous} {text.strip()}"
+
+    @property
+    def rescue_floor(self) -> float:
+        """What a contextual retry must score before it is believed."""
+        return self._settings.confidence_threshold + self._settings.context_rescue_margin
 
     def carry_over(
         self,

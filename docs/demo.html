@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo · Intent Classifier</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#faf9f7; --panel:#fff; --ink:#1a1917; --muted:#6b6a66; --line:#e3e1dc;
+  --accent:#2f6f4f; --accent-soft:#e8f1eb; --warn:#8a6d1f; --danger:#9c2f2f;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16171a; --panel:#1e2023; --ink:#eceae6; --muted:#9b9a95;
+    --line:#32343a; --accent:#6fbf94; --accent-soft:#223029; --warn:#d6b45c; --danger:#e0806f; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:3rem 1.5rem 4rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1.5rem}
+h1{font-size:2rem;margin:0 0 .4rem;letter-spacing:-.025em}
+.lede{font-size:1.05rem;color:var(--muted);margin:0;max-width:62ch}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1rem}
+.badge{display:inline-block;padding:.15rem .6rem;border-radius:999px;
+  background:var(--accent-soft);font-size:12.5px}
+.badge.mono{font-family:var(--mono)}
+.badge.warn{background:none;border:1px solid var(--warn);color:var(--warn)}
+.badge.danger{background:none;border:1px solid var(--danger);color:var(--danger)}
+.badge.ok{background:var(--accent-soft)}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:1rem;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.1rem}
+.thread{display:flex;flex-direction:column;gap:.9rem}
+.turn{display:flex;flex-direction:column;gap:.35rem}
+.bubble{max-width:88%;padding:.55rem .8rem;border-radius:14px;font-size:14px;line-height:1.45}
+.bubble.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bubble.assistant{align-self:flex-start;background:var(--bg);border:1px solid var(--line);
+  border-bottom-left-radius:4px;cursor:pointer;display:flex;flex-direction:column;gap:.2rem;
+  text-align:left;font:inherit;width:auto}
+.bubble.assistant:hover,.bubble.assistant[aria-current="true"]{border-color:var(--accent)}
+.bubble.assistant.unknown{border-style:dashed}
+.intent{font-weight:650}
+.meta{display:flex;align-items:center;gap:.35rem;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.high{background:var(--accent)} .dot.medium{background:var(--warn)} .dot.low{background:var(--danger)}
+.bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin:.35rem 0 .1rem}
+.bar span{display:block;height:100%}
+.bar.high span{background:var(--accent)} .bar.medium span{background:var(--warn)} .bar.low span{background:var(--danger)}
+.conf{font-size:1.3rem;font-variant-numeric:tabular-nums}
+.conf.high{color:var(--accent)} .conf.medium{color:var(--warn)} .conf.low{color:var(--danger)}
+h2{font-size:1.1rem;margin:0 0 .5rem}
+h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  margin:1.1rem 0 .4rem;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:.4rem .5rem;border-bottom:1px solid var(--line)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.7rem;
+  overflow-x:auto;font-family:var(--mono);font-size:12px;margin:.3rem 0}
+.mono{font-family:var(--mono);font-size:13px}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:.6rem .9rem;border-radius:0 8px 8px 0;font-size:13.5px;margin:.6rem 0 0}
+footer{margin-top:2.5rem;color:var(--muted);font-size:.85rem;
+  border-top:1px solid var(--line);padding-top:1.25rem}
+@media (max-width:880px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Intent Classifier, demonstrated</h1>
+  <p class="lede">
+    A real conversation against a running service. Every number below was produced by the run,
+    not written by hand. Click any reply to see how that turn was decided.
+  </p>
+  <div class="chips">
+    <span class="badge">6 turns</span>
+    <span class="badge">46 indexed examples</span>
+    <span class="badge">3 MCP tools</span>
+    <span class="badge mono">BAAI/bge-small-en-v1.5</span>
+    <span class="badge">provider: mock</span>
+  </div>
+  <p class="muted small" style="margin-top:.75rem">
+    Recorded with the offline provider, so the run is deterministic and makes no external calls.
+    <a href="architecture.html">Architecture</a> &middot;
+    <a href="api-documentation.html">API reference</a> &middot;
+    <a href="changelog.html">Changelog</a>
+  </p>
+</header>
+
+<div class="grid">
+  <section class="card" id="detail"></section>
+  <section class="card">
+    <h2>Conversation</h2>
+    <div class="thread" id="thread"></div>
+  </section>
+</div>
+
+<footer>
+  Tool calls are resolved and reported, never executed. The MCP block shows exactly what the
+  caller would invoke.
+</footer>
+</div>
+
+<script>
+const STEPS = [{"domain": "contract", "session": "demo-contracts", "query": "Find all active contracts with Microsoft", "note": "A plain question. Entities are extracted and mapped onto the MCP tool's arguments.", "intent": "CONTRACT_SEARCH", "confidence": 0.8404, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 14.393, "entities": {"counterparty": "Microsoft", "status": "ACTIVE"}, "tool": {"name": "search_contracts", "version": "v1", "arguments": {"counterparty": "Microsoft", "status": "ACTIVE"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "03a7bd02954649688a24cc9e6eca37ec", "server": "contracts", "tool": "search_contracts", "qualified_name": "mcp__contracts__search_contracts", "description": "Search contracts by counterparty and status", "transport": "stdio", "endpoint": "npx -y @acme/contracts-mcp", "arguments": {"counterparty": "Microsoft", "status": "ACTIVE"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "context": {"session_id": "demo-contracts", "turn": 1, "previous_turns": 0, "previous_intent": null, "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.9902, "s_margin": 0.3714, "s_support": 1.0, "confidence": 0.8404, "agg_top": 0.095843, "agg_second": 0.060249, "best_similarity": 0.942357}, "top_intents": [{"intent": "CONTRACT_SEARCH", "intent_id": "bd774b65bef6413bb6f9cd493ac61fca", "score": 0.095843, "supporting_examples": 6, "best_similarity": 0.942357}, {"intent": "CONTRACT_EXPIRY", "intent_id": "2139b3c418f24c2783aa10c7278d2fd4", "score": 0.060249, "supporting_examples": 3, "best_similarity": 0.743307}, {"intent": "CONTRACT_COMPARE", "intent_id": "852bd22e32da4f329f69d157bb64102f", "score": 0.045502, "supporting_examples": 2, "best_similarity": 0.754677}, {"intent": "CONTRACT_SUMMARY", "intent_id": "7ca5e645156342c1996395d45a5a2570", "score": 0.028992, "supporting_examples": 2, "best_similarity": 0.715476}], "dense_hits": [{"text": "Find all contracts with Microsoft", "intent": "CONTRACT_SEARCH", "score": 0.942357}, {"text": "Give me all active contracts", "intent": "CONTRACT_SEARCH", "score": 0.855186}, {"text": "Show me Microsoft agreements", "intent": "CONTRACT_SEARCH", "score": 0.806915}, {"text": "Compare the Microsoft and Oracle contracts", "intent": "CONTRACT_COMPARE", "score": 0.754677}], "bm25_hits": [{"text": "Find all contracts with Microsoft", "intent": "CONTRACT_SEARCH", "score": 9.18938}, {"text": "Give me all active contracts", "intent": "CONTRACT_SEARCH", "score": 6.307883}, {"text": "Find agreements that terminate in 2026", "intent": "CONTRACT_EXPIRY", "score": 2.427997}, {"text": "Which contracts do we have with Salesforce?", "intent": "CONTRACT_SEARCH", "score": 2.027787}]}, {"domain": "contract", "session": "demo-contracts", "query": "which of them expire next month", "note": "A follow-up. 'them' refers back, and this one still resolves on its own.", "intent": "CONTRACT_EXPIRY", "confidence": 0.8306, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 14.373, "entities": {"counterparty": "Microsoft"}, "tool": {"name": "get_expiring_contracts", "version": "v1", "arguments": {"counterparty": "Microsoft"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "a9e3b7f4c83e4fcd93ed2f3f30afffe0", "server": "contracts", "tool": "get_expiring_contracts", "qualified_name": "mcp__contracts__get_expiring_contracts", "description": "Contracts expiring in a window", "transport": "stdio", "endpoint": "npx -y @acme/contracts-mcp", "arguments": {"counterparty": "Microsoft"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "context": {"session_id": "demo-contracts", "turn": 2, "previous_turns": 1, "previous_intent": "CONTRACT_SEARCH", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": ["counterparty"]}, "breakdown": {"s_dense": 0.8517, "s_rrf": 0.995, "s_margin": 0.535, "s_support": 1.0, "confidence": 0.8306, "agg_top": 0.096303, "agg_second": 0.044783, "best_similarity": 0.840689}, "top_intents": [{"intent": "CONTRACT_EXPIRY", "intent_id": "2139b3c418f24c2783aa10c7278d2fd4", "score": 0.096303, "supporting_examples": 7, "best_similarity": 0.840689}, {"intent": "CONTRACT_SUMMARY", "intent_id": "7ca5e645156342c1996395d45a5a2570", "score": 0.044783, "supporting_examples": 3, "best_similarity": 0.0}, {"intent": "CONTRACT_SEARCH", "intent_id": "bd774b65bef6413bb6f9cd493ac61fca", "score": 0.030118, "supporting_examples": 2, "best_similarity": 0.63335}, {"intent": "CONTRACT_COMPARE", "intent_id": "852bd22e32da4f329f69d157bb64102f", "score": 0.028992, "supporting_examples": 2, "best_similarity": 0.657305}], "dense_hits": [{"text": "Show agreements expiring next month", "intent": "CONTRACT_EXPIRY", "score": 0.840689}, {"text": "Which contracts expire this year?", "intent": "CONTRACT_EXPIRY", "score": 0.782733}, {"text": "Contracts expiring in the next 90 days", "intent": "CONTRACT_EXPIRY", "score": 0.737259}, {"text": "Find agreements that terminate in 2026", "intent": "CONTRACT_EXPIRY", "score": 0.706771}], "bm25_hits": [{"text": "Show agreements expiring next month", "intent": "CONTRACT_EXPIRY", "score": 5.84239}, {"text": "Which contracts expire this year?", "intent": "CONTRACT_EXPIRY", "score": 5.234969}, {"text": "When does the Microsoft contract expire?", "intent": "CONTRACT_EXPIRY", "score": 2.427997}, {"text": "Which contracts do we have with Salesforce?", "intent": "CONTRACT_SEARCH", "score": 2.264093}]}, {"domain": "contract", "session": "demo-contracts", "query": "and for Oracle", "note": "Three words with no anchor. Alone it is UNKNOWN; read against the previous question it resolves, and the new counterparty wins over the carried one.", "intent": "CONTRACT_EXPIRY", "confidence": 0.7621, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 25.621, "entities": {"period": "Oracle", "counterparty": "Microsoft"}, "tool": {"name": "get_expiring_contracts", "version": "v1", "arguments": {"period": "Oracle", "counterparty": "Microsoft"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "a9e3b7f4c83e4fcd93ed2f3f30afffe0", "server": "contracts", "tool": "get_expiring_contracts", "qualified_name": "mcp__contracts__get_expiring_contracts", "description": "Contracts expiring in a window", "transport": "stdio", "endpoint": "npx -y @acme/contracts-mcp", "arguments": {"period": "Oracle", "counterparty": "Microsoft"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "context": {"session_id": "demo-contracts", "turn": 3, "previous_turns": 2, "previous_intent": "CONTRACT_EXPIRY", "used_for_retrieval": true, "retrieval_text": "which of them expire next month and for Oracle", "carried_entities": ["counterparty"]}, "breakdown": {"s_dense": 0.7654, "s_rrf": 0.9949, "s_margin": 0.382, "s_support": 1.0, "confidence": 0.7621, "agg_top": 0.096295, "agg_second": 0.059509, "best_similarity": 0.806164}, "top_intents": [{"intent": "CONTRACT_EXPIRY", "intent_id": "2139b3c418f24c2783aa10c7278d2fd4", "score": 0.096295, "supporting_examples": 7, "best_similarity": 0.806164}, {"intent": "CONTRACT_SEARCH", "intent_id": "bd774b65bef6413bb6f9cd493ac61fca", "score": 0.059509, "supporting_examples": 4, "best_similarity": 0.666988}, {"intent": "CONTRACT_COMPARE", "intent_id": "852bd22e32da4f329f69d157bb64102f", "score": 0.031025, "supporting_examples": 1, "best_similarity": 0.688878}, {"intent": "CONTRACT_SUMMARY", "intent_id": "7ca5e645156342c1996395d45a5a2570", "score": 0.029211, "supporting_examples": 2, "best_similarity": 0.684432}], "dense_hits": [{"text": "Show agreements expiring next month", "intent": "CONTRACT_EXPIRY", "score": 0.806164}, {"text": "Which contracts expire this year?", "intent": "CONTRACT_EXPIRY", "score": 0.761367}, {"text": "Contracts expiring in the next 90 days", "intent": "CONTRACT_EXPIRY", "score": 0.723532}, {"text": "When does the Microsoft contract expire?", "intent": "CONTRACT_EXPIRY", "score": 0.702536}], "bm25_hits": [{"text": "Show agreements expiring next month", "intent": "CONTRACT_EXPIRY", "score": 5.84239}, {"text": "Which contracts expire this year?", "intent": "CONTRACT_EXPIRY", "score": 5.234969}, {"text": "Compare the Microsoft and Oracle contracts", "intent": "CONTRACT_COMPARE", "score": 5.03384}, {"text": "When does the Microsoft contract expire?", "intent": "CONTRACT_EXPIRY", "score": 2.427997}]}, {"domain": "contract", "session": "demo-contracts", "query": "summarize contract C-1042", "note": "A different intent in the same conversation, with the contract id as its argument.", "intent": "CONTRACT_SUMMARY", "confidence": 0.8714, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 8.41, "entities": {"contract_id": "C-1042", "counterparty": "Microsoft"}, "tool": {"name": "summarize_contract", "version": "v1", "arguments": {"contract_id": "C-1042", "counterparty": "Microsoft"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "97f2d21ed23441c5a50f1ac9157a2f09", "server": "contracts", "tool": "summarize_contract", "qualified_name": "mcp__contracts__summarize_contract", "description": "Summarize one contract", "transport": "stdio", "endpoint": "npx -y @acme/contracts-mcp", "arguments": {"contract_id": "C-1042"}, "missing_required": [], "unmapped": ["counterparty"], "ready": true, "unresolved": null}}, "context": {"session_id": "demo-contracts", "turn": 4, "previous_turns": 3, "previous_intent": "CONTRACT_EXPIRY", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": ["counterparty"]}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.9794, "s_margin": 0.5062, "s_support": 1.0, "confidence": 0.8714, "agg_top": 0.094797, "agg_second": 0.046808, "best_similarity": 0.951771}, "top_intents": [{"intent": "CONTRACT_SUMMARY", "intent_id": "7ca5e645156342c1996395d45a5a2570", "score": 0.094797, "supporting_examples": 4, "best_similarity": 0.951771}, {"intent": "CONTRACT_COMPARE", "intent_id": "852bd22e32da4f329f69d157bb64102f", "score": 0.046808, "supporting_examples": 2, "best_similarity": 0.845513}, {"intent": "CONTRACT_EXPIRY", "intent_id": "2139b3c418f24c2783aa10c7278d2fd4", "score": 0.044803, "supporting_examples": 3, "best_similarity": 0.701874}, {"intent": "CONTRACT_SEARCH", "intent_id": "bd774b65bef6413bb6f9cd493ac61fca", "score": 0.030536, "supporting_examples": 2, "best_similarity": 0.714673}], "dense_hits": [{"text": "Give me a summary of contract C-1042", "intent": "CONTRACT_SUMMARY", "score": 0.951771}, {"text": "Diff contract C-1042 against C-1099", "intent": "CONTRACT_COMPARE", "score": 0.845513}, {"text": "Explain the main obligations in this contract", "intent": "CONTRACT_SUMMARY", "score": 0.753686}, {"text": "TL;DR of the Salesforce contract", "intent": "CONTRACT_SUMMARY", "score": 0.720752}], "bm25_hits": [{"text": "Diff contract C-1042 against C-1099", "intent": "CONTRACT_COMPARE", "score": 6.929566}, {"text": "Give me a summary of contract C-1042", "intent": "CONTRACT_SUMMARY", "score": 5.546494}, {"text": "Summarize the Microsoft MSA", "intent": "CONTRACT_SUMMARY", "score": 3.497891}, {"text": "TL;DR of the Salesforce contract", "intent": "CONTRACT_SUMMARY", "score": 1.493555}]}, {"domain": "contract", "session": "demo-contracts", "query": "what is the weather today", "note": "A change of subject. It must stay UNKNOWN rather than inheriting the last topic.", "intent": "UNKNOWN", "confidence": 0.3436, "reason": "low_similarity", "strategy": "hybrid_rrf", "latency_ms": 13.793, "entities": {}, "tool": null, "context": {"session_id": "demo-contracts", "turn": 5, "previous_turns": 4, "previous_intent": "CONTRACT_SUMMARY", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 0.0814, "s_rrf": 0.6463, "s_margin": 0.0141, "s_support": 1.0, "confidence": 0.3436, "agg_top": 0.062552, "agg_second": 0.061672, "best_similarity": 0.532561}, "top_intents": [{"intent": "CONTRACT_EXPIRY", "intent_id": "2139b3c418f24c2783aa10c7278d2fd4", "score": 0.062552, "supporting_examples": 7, "best_similarity": 0.532561}, {"intent": "CONTRACT_SUMMARY", "intent_id": "7ca5e645156342c1996395d45a5a2570", "score": 0.061672, "supporting_examples": 7, "best_similarity": 0.529183}, {"intent": "CONTRACT_COMPARE", "intent_id": "852bd22e32da4f329f69d157bb64102f", "score": 0.047493, "supporting_examples": 3, "best_similarity": 0.559605}, {"intent": "CONTRACT_SEARCH", "intent_id": "bd774b65bef6413bb6f9cd493ac61fca", "score": 0.014493, "supporting_examples": 1, "best_similarity": 0.496782}], "dense_hits": [{"text": "Compare this year's MSA with last year's version", "intent": "CONTRACT_COMPARE", "score": 0.559605}, {"text": "List contracts ending before December", "intent": "CONTRACT_EXPIRY", "score": 0.532561}, {"text": "Which contracts expire this year?", "intent": "CONTRACT_EXPIRY", "score": 0.531576}, {"text": "Give me a summary of contract C-1042", "intent": "CONTRACT_SUMMARY", "score": 0.529183}], "bm25_hits": [{"text": "What is different between these two agreements?", "intent": "CONTRACT_COMPARE", "score": 4.414646}, {"text": "What does the Deloitte SOW cover?", "intent": "CONTRACT_SUMMARY", "score": 2.028318}, {"text": "What are the key terms of the Acme agreement?", "intent": "CONTRACT_SUMMARY", "score": 1.782479}, {"text": "What contracts are up for renewal in Q3?", "intent": "CONTRACT_EXPIRY", "score": 1.522372}]}, {"domain": "employee", "session": "demo-people", "query": "how many leave days do I have left", "note": "A different domain entirely, with its own intents and its own vocabulary.", "intent": "EMPLOYEE_LEAVE", "confidence": 0.8871, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 13.251, "entities": {}, "tool": {"name": "get_leave_balance", "version": "v1", "arguments": {}, "missing_required": [], "ready": true, "mcp": null}, "context": {"session_id": "demo-people", "turn": 1, "previous_turns": 0, "previous_intent": null, "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 1.0, "s_margin": 0.5485, "s_support": 1.0, "confidence": 0.8871, "agg_top": 0.096791, "agg_second": 0.043704, "best_similarity": 0.989239}, "top_intents": [{"intent": "EMPLOYEE_LEAVE", "intent_id": "0a961ae00b394874a6aa9c1f6602afbd", "score": 0.096791, "supporting_examples": 6, "best_similarity": 0.989239}, {"intent": "EMPLOYEE_SEARCH", "intent_id": "0ca6128bafcc4a00ac1128936d9b960d", "score": 0.043704, "supporting_examples": 3, "best_similarity": 0.606394}, {"intent": "EMPLOYEE_DETAILS", "intent_id": "62edd577c97d4a4387b0111fb0c6d453", "score": 0.014706, "supporting_examples": 1, "best_similarity": 0.591615}], "dense_hits": [{"text": "How many leave days do I have left?", "intent": "EMPLOYEE_LEAVE", "score": 0.989239}, {"text": "Show my leave balance", "intent": "EMPLOYEE_LEAVE", "score": 0.826466}, {"text": "How much parental leave am I entitled to?", "intent": "EMPLOYEE_LEAVE", "score": 0.765097}, {"text": "List my approved time off this quarter", "intent": "EMPLOYEE_LEAVE", "score": 0.728967}], "bm25_hits": [{"text": "How many leave days do I have left?", "intent": "EMPLOYEE_LEAVE", "score": 15.334789}, {"text": "How much parental leave am I entitled to?", "intent": "EMPLOYEE_LEAVE", "score": 4.400912}, {"text": "Show my leave balance", "intent": "EMPLOYEE_LEAVE", "score": 1.398393}, {"text": "What is Rahul's remaining sick leave?", "intent": "EMPLOYEE_LEAVE", "score": 1.193842}]}];
+const pct = v => Math.round(v * 100) + "%";
+const band = v => v >= 0.8 ? "high" : (v >= 0.5 ? "medium" : "low");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]);
+
+function rows(list, key) {
+  if (!list || !list.length) return '<p class="muted small">None.</p>';
+  return '<table><tbody>' + list.map(h =>
+    `<tr><td>${esc(h.text)}</td><td class="mono small">${esc(h.intent)}</td>` +
+    `<td class="num">${h.score.toFixed(3)}</td></tr>`).join('') + '</tbody></table>';
+}
+
+function detail(i) {
+  const s = STEPS[i], b = band(s.confidence);
+  const mcp = (s.tool || {}).mcp;
+  let html = `<h2>${esc(s.intent)}</h2>
+    <div class="conf ${b}">${pct(s.confidence)}</div>
+    <div class="bar ${b}"><span style="width:${pct(s.confidence)}"></span></div>
+    <p class="muted small">${esc(s.query)}</p>
+    <div class="chips">
+      <span class="badge">${esc(s.domain)}</span>
+      <span class="badge">${esc(s.strategy || '')}</span>
+      <span class="badge">${(s.latency_ms||0).toFixed(1)} ms</span>
+      ${s.reason ? `<span class="badge warn">${esc(s.reason)}</span>` : ''}
+    </div>
+    <p class="note">${esc(s.note)}</p>`;
+
+  html += '<h3>Entities</h3>';
+  const keys = Object.keys(s.entities || {});
+  html += keys.length
+    ? '<table><tbody>' + keys.map(k =>
+        `<tr><td class="mono small">${esc(k)}</td><td>${esc(s.entities[k])}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted small">None extracted.</p>';
+
+  html += '<h3>MCP call</h3>';
+  if (mcp && !mcp.unresolved) {
+    html += `<div class="chips"><span class="badge mono">${esc(mcp.qualified_name)}</span>` +
+      (mcp.ready ? '<span class="badge ok">ready</span>' : '<span class="badge warn">not ready</span>') +
+      `<span class="badge">${esc(mcp.transport)}</span></div>` +
+      `<pre>${esc(JSON.stringify({server: mcp.server, tool: mcp.tool, arguments: mcp.arguments}, null, 2))}</pre>` +
+      '<p class="muted small">Reported, never called.</p>';
+  } else {
+    html += '<p class="muted small">This intent is not bound to an MCP tool.</p>';
+  }
+
+  if (s.context && (s.context.used_for_retrieval || (s.context.carried_entities||[]).length)) {
+    html += '<h3>Conversation</h3>';
+    if (s.context.used_for_retrieval)
+      html += `<p class="small">Read against the previous turn: <span class="mono">${esc(s.context.retrieval_text)}</span></p>`;
+    if ((s.context.carried_entities||[]).length)
+      html += `<p class="small">Carried forward: <span class="mono">${esc(s.context.carried_entities.join(', '))}</span></p>`;
+  }
+
+  if (s.breakdown) {
+    const bd = s.breakdown;
+    const signals = [["s_dense",bd.s_dense],["s_rrf",bd.s_rrf],["s_margin",bd.s_margin],
+                     ["s_support",bd.s_support],["best similarity",bd.best_similarity]];
+    html += '<h3>Confidence breakdown</h3><table><tbody>' + signals.map(([n,v]) =>
+      `<tr><td><span class="dot ${band(v)}"></span> ${n}</td><td class="num">${v.toFixed(3)}</td></tr>`
+    ).join('') + '</tbody></table>';
+  }
+
+  if ((s.top_intents||[]).length) {
+    html += '<h3>Ranked intents after fusion</h3><table><tbody>' + s.top_intents.map((t,n) =>
+      `<tr><td>${n+1}</td><td><span class="dot ${band(t.best_similarity)}"></span> ${esc(t.intent)}</td>` +
+      `<td class="num">${t.score.toFixed(5)}</td><td class="num">${t.best_similarity.toFixed(3)}</td></tr>`
+    ).join('') + '</tbody></table>';
+  }
+
+  html += '<h3>Dense retrieval</h3>' + rows(s.dense_hits);
+  html += '<h3>BM25 retrieval</h3>' + rows(s.bm25_hits);
+  document.getElementById('detail').innerHTML = html;
+  document.querySelectorAll('.bubble.assistant').forEach((el, n) =>
+    el.setAttribute('aria-current', n === i ? 'true' : 'false'));
+}
+
+document.getElementById('thread').innerHTML = STEPS.map((s, i) => {
+  const b = band(s.confidence), unknown = s.intent === 'UNKNOWN';
+  const entities = Object.keys(s.entities||{}).length
+    ? `<span class="muted small mono">${esc(JSON.stringify(s.entities))}</span>` : '';
+  return `<div class="turn">
+    <div class="bubble user">${esc(s.query)}</div>
+    <button class="bubble assistant ${unknown ? 'unknown' : ''}" onclick="detail(${i})">
+      <span class="intent">${unknown ? 'No matching intent' : esc(s.intent)}</span>
+      ${entities}
+      <span class="meta"><span class="dot ${b}"></span>${pct(s.confidence)}
+      ${s.tool && s.tool.name ? '· <span class="mono">'+esc(s.tool.name)+'</span>' : ''}</span>
+    </button>
+  </div>`;
+}).join('');
+detail(0);
+</script>
+</body>
+</html>

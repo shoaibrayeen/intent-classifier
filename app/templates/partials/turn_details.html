@@ -1,0 +1,158 @@
+{% if not details %}
+<div class="detail-empty">
+  <p class="muted">No turn selected.</p>
+  <p class="muted small">
+    Ask something on the right. The intent and a short answer appear in the chat; everything
+    behind the decision appears here.
+  </p>
+</div>
+{% else %}
+{% set band = details.confidence | band %}
+<div class="detail-body">
+  <div class="detail-head">
+    <div class="label">Intent</div>
+    <div class="result-intent {{ 'unknown' if details.intent == 'UNKNOWN' else '' }}">{{ details.intent }}</div>
+    {% if details.reason %}<div class="muted small">reason: {{ details.reason }}</div>{% endif %}
+    <div class="detail-conf">
+      <span class="result-confidence {{ band }}">{{ details.confidence | pct }}</span>
+      <span class="muted small">
+        {% if band == "high" %}strong match{% elif band == "medium" %}uncertain, worth reviewing{% else %}weak match{% endif %}
+      </span>
+    </div>
+    <div class="confidence-bar {{ band }}"><span style="width: {{ (details.confidence * 100) | round(0) }}%"></span></div>
+    <div class="chips" style="margin-top:.6rem">
+      {% if details.turn %}<span class="badge">turn {{ details.turn }}</span>{% endif %}
+      {% if details.strategy %}<span class="badge">{{ details.strategy }}</span>{% endif %}
+      {% if details.latency_ms %}<span class="badge">{{ details.latency_ms | num(1) }} ms</span>{% endif %}
+      {% if details.index_version %}<span class="badge">index v{{ details.index_version }}</span>{% endif %}
+    </div>
+    <p class="muted small" style="margin-top:.5rem">Query: {{ details.text }}</p>
+  </div>
+
+  <div class="detail-section">
+    <h3>Entities</h3>
+    {% if details.entities %}
+    <table>
+      <tbody>
+        {% for name, value in details.entities.items() %}
+        <tr><td class="mono small">{{ name }}</td><td>{{ value }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty small">None extracted.</p>
+    {% endif %}
+    {% if details.extraction %}
+    <p class="muted small">extraction: {{ details.extraction.status }}{% if details.extraction.model %} · {{ details.extraction.model }}{% endif %}</p>
+    {% if details.extraction.rejected %}<p class="muted small">rejected: {{ details.extraction.rejected | join("; ") }}</p>{% endif %}
+    {% endif %}
+  </div>
+
+  <div class="detail-section">
+    <h3>Tool</h3>
+    {% if details.mcp %}
+      {% if details.mcp.unresolved %}
+      <p class="small"><span class="badge danger">unresolved</span> {{ details.mcp.unresolved }}</p>
+      {% else %}
+      <div class="chips">
+        <a class="badge mono" href="/ui/mcp/{{ details.mcp.tool_id }}">{{ details.mcp.qualified_name }}</a>
+        {% if details.mcp.ready %}<span class="badge ok">ready</span>{% else %}<span class="badge warn">not ready</span>{% endif %}
+      </div>
+      <pre class="mono">{{ {"server": details.mcp.server, "tool": details.mcp.tool, "arguments": details.mcp.arguments} | json_pretty }}</pre>
+      {% if details.mcp.missing_required %}<p class="small">missing: <span class="mono">{{ details.mcp.missing_required | join(", ") }}</span></p>{% endif %}
+      {% endif %}
+      <p class="muted small">Resolved and reported. This service does not call it.</p>
+    {% elif details.tool and details.tool.name %}
+      <p class="mono">{{ details.tool.name }} <span class="muted small">{{ details.tool.version }}</span></p>
+      {% if details.tool.arguments %}<pre class="mono">{{ details.tool.arguments | json_pretty }}</pre>{% endif %}
+      {% if details.tool.missing_required %}<p class="small">missing: <span class="mono">{{ details.tool.missing_required | join(", ") }}</span></p>{% endif %}
+      <p class="muted small">Not bound to an MCP tool.</p>
+    {% else %}
+      <p class="empty small">This intent maps to no tool.</p>
+    {% endif %}
+  </div>
+
+  {% if details.context and (details.context.used_for_retrieval or details.context.carried_entities) %}
+  <div class="detail-section">
+    <h3>Conversation</h3>
+    {% if details.context.used_for_retrieval %}
+    <p class="small">Read against the previous turn: <span class="mono">{{ details.context.retrieval_text }}</span></p>
+    {% endif %}
+    {% if details.context.carried_entities %}
+    <p class="small">Carried forward: <span class="mono">{{ details.context.carried_entities | join(", ") }}</span></p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if details.breakdown %}
+  <div class="detail-section">
+    <h3>Confidence breakdown</h3>
+    <p class="muted small">Green above 80%, amber 50 to 80%, red below.</p>
+    <table>
+      <tbody>
+        {% for signal, value, meaning in [
+          ("s_dense", details.breakdown.s_dense, "best cosine similarity, rescaled"),
+          ("s_rrf", details.breakdown.s_rrf, "fusion score against its ceiling"),
+          ("s_margin", details.breakdown.s_margin, "lead over the runner-up"),
+          ("s_support", details.breakdown.s_support, "examples backing the top intent"),
+          ("best similarity", details.breakdown.best_similarity, "floor for UNKNOWN is " ~ settings.min_dense_similarity),
+        ] %}
+        <tr>
+          <td><span class="dot-cell"><span class="dot {{ value | band }}"></span>{{ signal }}</span></td>
+          <td class="num">{{ value | num(3) }}</td>
+          <td class="muted small">{{ meaning }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if details.top_intents %}
+  <div class="detail-section">
+    <h3>Ranked intents after fusion</h3>
+    <table>
+      <thead><tr><th>#</th><th>Intent</th><th class="num">Score</th><th class="num">Similarity</th></tr></thead>
+      <tbody>
+        {% for item in details.top_intents %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td><span class="dot-cell"><span class="dot {{ item.best_similarity | band }}"></span>{{ item.intent }}</span></td>
+          <td class="num">{{ item.score | num(5) }}</td>
+          <td class="num">{{ item.best_similarity | num(3) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if details.dense_hits or details.bm25_hits %}
+  <div class="detail-section">
+    <h3>Retrieval</h3>
+    {% if details.tokens %}<p class="muted small">Tokens: <span class="mono">{{ details.tokens | join(" · ") }}</span></p>{% endif %}
+    {% for label, hits, key in [("Dense", details.dense_hits, "similarity"), ("BM25", details.bm25_hits, "score")] %}
+    <p class="label" style="margin-top:.6rem">{{ label }}</p>
+    {% if hits %}
+    <table>
+      <tbody>
+        {% for hit in hits %}
+        <tr><td>{{ hit.text }}</td><td class="mono small">{{ hit.intent }}</td><td class="num">{{ hit[key] | num(3) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty small">No {{ label | lower }} hits.</p>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% elif not details.breakdown %}
+  <div class="detail-section">
+    <p class="muted small">
+      This turn was recorded before the full trace was kept, so only the intent, confidence and
+      entities are available for it.
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

@@ -315,8 +315,19 @@ declares the same entity, unless the new turn names its own. Only entities the
 *new* intent accepts are eligible, so nothing leaks into a tool that has no use
 for it. The response lists what was carried.
 
+Two guards stop a rescue from absorbing a change of subject. The retry only runs
+for text that reads as referential, a pronoun or a fragment too short to stand
+alone, and its result must clear the threshold by `CONTEXT_RESCUE_MARGIN`.
+Without them, "what is the weather today" asked after "summarize contract
+C-1042" came back as `CONTRACT_SUMMARY`, because the previous question alone
+matched the concatenation.
+
 The extractor also sees the last few turns as `conversation_history`, so a real
 model can resolve "it" and "they" itself.
+
+Every turn records a compact snapshot of its own decision, so reopening a
+conversation shows what actually happened then rather than a re-classification
+against a catalogue that has since moved on.
 
 Sessions live in the same Chroma store as everything else, in a `session_turns`
 collection: one deployment is still one directory. Per-session size and a TTL
@@ -416,6 +427,8 @@ Everything a reader opens lives in `docs/`, and the app serves it too.
 | `docs/architecture.html` | — | the design, the pipeline, and the decisions behind it |
 | `docs/api-documentation.html` | `/ui/api` | the API reference, generated from the live schema |
 | `docs/changelog.html` | `/ui/changelog`, `/changelog` | what changed and why |
+| `docs/demo.html` | — | a recorded conversation, interactive |
+| `docs/demo.gif` | — | the same run as an animation |
 | `README.md` | — | setup, configuration, and how to run it |
 
 `README.md` stays at the repository root rather than moving into `docs/`:
@@ -430,6 +443,16 @@ uv run python -m scripts.build_api_docs --check  # fail if stale
 ```
 
 A test runs that check, so the reference cannot drift from the code.
+
+The demo is recorded the same way, against a running service:
+
+```bash
+LLM_PROVIDER=mock docker compose up -d
+uv run --with pillow python -m scripts.build_demo
+```
+
+It clears its own sessions first, so a re-recording cannot inherit entities from
+a previous run.
 
 ## Quickstart (Docker)
 
@@ -487,10 +510,10 @@ embedding model (~67 MB) into `./data/models`.
 | `/` | domains with intent and example counts, create and delete |
 | `/ui/domains/{id}` | intents in a domain, tool mapping, index status, rebuild |
 | `/ui/domains/{id}/intents/{id}` | entity schema, training examples, add and delete |
-| `/ui/playground` | classify a query and see every retrieval stage |
+| `/ui/playground` | a chat: ask on the right, see the reasoning on the left |
 | `/ui/intents` | every intent across every domain, and what it is wired to |
 | `/ui/mcp` | the MCP tool registry; `/ui/mcp/{id}` for one tool |
-| `/ui/sessions` | recent conversations, auto-refreshing |
+| `/ui/sessions` | recent conversations; open one to reread and inspect it |
 | `/ui/changelog` | what changed and why, also at `/changelog` |
 
 Confidence is banded the same way everywhere it is shown: green above 80%,
@@ -637,6 +660,8 @@ Every value has a working default in `.env`.
 | `SESSION_HISTORY_TURNS` | `5` | turns shown to the extractor |
 | `SESSION_MAX_TURNS` / `SESSION_TTL_SECONDS` | `50` / `604800` | per-session size and age limits |
 | `CONTEXT_RETRIEVAL_ENABLED` | `true` | retry an UNKNOWN follow-up with the previous question |
+| `CONTEXT_RESCUE_MARGIN` | `0.10` | how far above threshold a contextual retry must score |
+| `CONTEXT_FOLLOWUP_MAX_WORDS` | `3` | a fragment this short counts as referential |
 | `ENTITY_CARRY_OVER_ENABLED` | `true` | carry earlier entities into a new intent |
 | `LLM_TIMEOUT_SECONDS` | `10` | extraction gives up after this |
 | `AUTH_ENABLED` / `API_KEYS` | `false` / *(empty)* | API key authentication |

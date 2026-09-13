@@ -22,8 +22,8 @@ from app.dependencies import (
     get_index_manager,
     get_intent_service,
 )
-from app.errors import InvalidInputError
-from app.models.classification import ClassifyRequest
+from app.errors import InvalidInputError, NotFoundError
+from app.models.classification import ClassifyRequest, SessionTurn
 from app.models.domain import DomainCreate, DomainUpdate
 from app.models.example import ExampleCreate
 from app.models.intent import IntentCreate, IntentUpdate, ToolRef
@@ -37,6 +37,7 @@ from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
 from app.services.mcp_service import schema_summary
 from app.services.strategies import BUILTIN_STRATEGIES
+from app.services.turn_details import snapshot_of, snapshot_of_turn
 from app.ui.templating import templates
 
 router = APIRouter(tags=["ui"], include_in_schema=False)
@@ -134,21 +135,36 @@ def intent_page(
 def playground(
     request: Request,
     domain: str | None = None,
+    session: str | None = None,
     domains: DomainService = Depends(get_domain_service),
     container: Container = Depends(get_container),
 ):
+    """The chat workbench.
+
+    With ``?session=`` it reopens an existing conversation, its turns and their
+    recorded details included, so a session listed elsewhere is one click from
+    being inspected rather than being a dead row.
+    """
+    session_id = (session or "").strip() or f"chat-{uuid.uuid4().hex[:8]}"
+    turns = container.sessions.all_turns(session_id) if session else []
+    selected = domain
+    if turns and not selected:
+        # Reopen the conversation against the domain it actually happened in.
+        selected = _domain_of_session(container, session_id)
     return templates.TemplateResponse(
         request=request,
         name="pages/playground.html",
         context={
             "domains": domains.list(),
-            "selected": domain,
+            "selected": selected,
+            "session_id": session_id,
+            "turns": turns,
+            "details": snapshot_of_turn(turns[-1]) if turns else None,
             "strategies": list(BUILTIN_STRATEGIES.values()),
             "extraction_available": container.entity_extractor.available,
             "extraction_enabled": container.entity_extractor.enabled,
             "provider": container.entity_extractor.provider_name,
-            "sessions_enabled": container.sessions.enabled,
-            "suggested_session": f"play-{uuid.uuid4().hex[:8]}",
+            "settings": container.settings,
         },
     )
 
@@ -590,6 +606,11 @@ async def ui_classify(
     session_id: Annotated[str, Form()] = "",
     container: Container = Depends(get_container),
 ):
+    """Classify one chat message.
+
+    Returns the new exchange to append to the thread, and swaps the detail pane
+    out of band, so the answer and the reasoning arrive together.
+    """
     payload = ClassifyRequest(
         domain=domain,
         text=text,
@@ -598,11 +619,52 @@ async def ui_classify(
         session_id=session_id.strip() or None,
     )
     result = await container.classification.classify(payload, debug=True)
-    turns = container.sessions.all_turns(payload.session_id) if payload.session_id else []
+
+    details = snapshot_of(result, result.debug)
+    details["text"] = payload.text
+    details["turn"] = result.context.turn if result.context else 0
+    turn = SessionTurn(
+        turn=details["turn"],
+        text=payload.text,
+        intent=result.intent,
+        intent_id=result.intent_id,
+        confidence=result.confidence,
+        entities=result.entities,
+        details=details,
+    )
+    bubble = templates.TemplateResponse(
+        request=request,
+        name="partials/chat_turn.html",
+        context={"turn": turn, "session_id": payload.session_id or ""},
+    )
+    panel = templates.TemplateResponse(
+        request=request,
+        name="partials/turn_details.html",
+        context={"details": details, "settings": container.settings},
+    )
+    return HTMLResponse(
+        bubble.body.decode()
+        + '<div id="detail-panel" class="card detail-pane" hx-swap-oob="true">'
+        + panel.body.decode()
+        + "</div>"
+    )
+
+
+@router.get("/ui/playground/details/{session_id}/{turn}", response_class=HTMLResponse)
+def playground_turn_details(
+    request: Request,
+    session_id: str,
+    turn: int,
+    container: Container = Depends(get_container),
+):
+    """The detail pane for one recorded turn."""
+    match = next((t for t in container.sessions.all_turns(session_id) if t.turn == turn), None)
+    if match is None:
+        raise NotFoundError(f"turn {turn} not found in session '{session_id}'")
     return templates.TemplateResponse(
         request=request,
-        name="partials/classify_result.html",
-        context={"result": result, "settings": container.settings, "turns": turns},
+        name="partials/turn_details.html",
+        context={"details": snapshot_of_turn(match), "settings": container.settings},
     )
 
 
@@ -611,7 +673,12 @@ def ui_clear_session(
     request: Request, session_id: str, container: Container = Depends(get_container)
 ):
     removed = container.sessions.clear(session_id)
-    return HTMLResponse(_flash(f"Session cleared ({removed} turn(s) forgotten)."))
+    return _partial(
+        request,
+        "partials/chat_thread.html",
+        {"turns": [], "session_id": session_id},
+        _flash(f"Session cleared ({removed} turn(s) forgotten)."),
+    )
 
 
 def _parse_schema(raw: str) -> dict:
@@ -889,3 +956,15 @@ def _index_statuses(container: Container, domains: DomainService) -> list[dict]:
             }
         )
     return rows
+
+
+def _domain_of_session(container: Container, session_id: str) -> str | None:
+    """Which domain a recorded conversation belongs to."""
+    store = container.store
+    with store.lock:
+        result = store.sessions.get(where={"session_id": session_id}, include=["metadatas"])
+    for meta in result.get("metadatas") or []:
+        domain_id = str(meta.get("domain_id", ""))
+        if domain_id:
+            return domain_id
+    return None

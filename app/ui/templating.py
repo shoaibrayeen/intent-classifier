@@ -63,6 +63,13 @@ def band(value: float | None) -> str:
     return "medium" if value >= MEDIUM_BAND else "low"
 
 
+def json_compact(value: Any) -> str:
+    """One-line JSON, for a chat bubble where a block would dominate."""
+    if not value:
+        return ""
+    return json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+
+
 def ts(value: float | None) -> str:
     if not value:
         return "-"
@@ -72,6 +79,7 @@ def ts(value: float | None) -> str:
 templates.env.filters["pct"] = pct
 templates.env.filters["num"] = num
 templates.env.filters["json_pretty"] = json_pretty
+templates.env.filters["json_compact"] = json_compact
 templates.env.filters["ts"] = ts
 templates.env.filters["band"] = band
 templates.env.globals["asset"] = asset

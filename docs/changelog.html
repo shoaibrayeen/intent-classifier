@@ -95,6 +95,46 @@
 <h2 id="unreleased">Unreleased</h2>
 <p class="muted">Documentation layout, the changelog itself, and playground fixes.</p>
 
+<h3>The playground became a chat</h3>
+<ul>
+  <li>The conversation is on the right and everything behind the last decision is on the left.
+  Enter classifies, Shift+Enter adds a line, and the domain is picked in the chat itself.</li>
+  <li><strong>Every turn keeps its own details.</strong> A compact snapshot of the decision is
+  recorded with the turn, so clicking a reply from last week shows what actually happened then.
+  Re-classifying an old turn instead would be slower and would quietly change its answer once the
+  catalogue moved on, which is the wrong thing to show beside a historical conversation. Details
+  are kept whether or not the caller asked to see them, so a turn recorded through the plain API
+  is as inspectable as one from the UI.</li>
+  <li>Sessions are now reachable: a row on the sessions page opens that conversation, with its
+  turns and the domain it happened in.</li>
+</ul>
+
+<h3>Fixed: a change of subject was absorbed by the previous turn</h3>
+<p>
+  The contextual retry classifies the previous question <em>plus</em> the new one, which means
+  the previous question alone can carry the match. Asked after "summarize contract C-1042",
+  "what is the weather today" came back as <code>CONTRACT_SUMMARY</code> at 0.66 confidence,
+  where on its own it was correctly UNKNOWN at 0.34. This was found by running the demo, not by
+  a test.
+</p>
+<p>
+  Two guards now apply, the same shape as the ones on the auto strategy. The retry only runs for
+  text that reads as referential, a pronoun or a fragment too short to stand alone, and its
+  result must clear the threshold by a margin. "and for Oracle" is still rescued; "what is the
+  weather today" is not.
+</p>
+
+<h3>A recorded demo</h3>
+<ul>
+  <li><code>docs/demo.html</code> is a real conversation against a running service, interactive:
+  click any reply to see how that turn was decided. <code>docs/demo.gif</code> is the same run as
+  an animation.</li>
+  <li>Both are produced by <code>scripts/build_demo.py</code> from one live recording, so neither
+  can drift from what the service does. It clears its sessions first: re-recording against a
+  service that already held those conversations carried entities in from the previous run and
+  produced a transcript that never happened.</li>
+</ul>
+
 <h3>Fixed in the playground</h3>
 <ul>
   <li><strong>A long intent name overlapped the confidence beside it.</strong> Grid items default

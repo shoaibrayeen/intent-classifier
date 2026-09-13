@@ -200,3 +200,39 @@ def test_health_names_the_provider(app_factory):
     assert body["entity_extraction"]["provider"] == "mock"
     assert body["entity_extraction"]["provider_configured"] is True
     assert body["sessions_enabled"] is True
+
+
+def test_a_change_of_subject_is_not_absorbed_by_the_previous_turn(app_factory):
+    """The contextual retry classifies the previous question plus the new one,
+    so the previous question alone could carry the match. Asked after
+    "summarize contract C-1042", "what is the weather today" used to come back
+    as CONTRACT_SUMMARY."""
+    _, client, _ = mock_app(app_factory)
+
+    classify(client, "summarize contract C-1042", session="topic-change")
+    off_topic = classify(client, "what is the weather today", session="topic-change")
+
+    assert off_topic["intent"] == "UNKNOWN"
+    assert off_topic["context"]["used_for_retrieval"] is False
+
+
+def test_a_referential_fragment_is_still_rescued(app_factory):
+    """The guard must not cost the feature its purpose."""
+    _, client, _ = mock_app(app_factory)
+
+    classify(client, "Show me all contracts with Microsoft", session="ref")
+    follow_up = classify(client, "and for Oracle", session="ref")
+
+    assert follow_up["intent"] == "CONTRACT_SEARCH"
+    assert follow_up["context"]["used_for_retrieval"] is True
+
+
+def test_a_weak_rescue_is_refused(app_factory):
+    """Clearing the threshold is not enough; a rescue must clear the margin."""
+    _, client, _ = mock_app(app_factory, context_rescue_margin=0.45)
+
+    classify(client, "Show me all contracts with Microsoft", session="strict")
+    follow_up = classify(client, "and for Oracle", session="strict")
+
+    assert follow_up["intent"] == "UNKNOWN"
+    assert follow_up["context"]["used_for_retrieval"] is False

@@ -1,0 +1,8 @@
+{% for turn in turns %}
+  {% include "partials/chat_turn.html" %}
+{% else %}
+<div class="chat-empty">
+  <p class="muted">No messages yet.</p>
+  <p class="muted small">Pick a domain, type a question and press Enter.</p>
+</div>
+{% endfor %}

@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     #: When a short follow-up cannot be classified on its own, retry it with
     #: the previous question prepended.
     context_retrieval_enabled: bool = True
+    #: How far above the normal threshold a contextual retry must score before
+    #: it is accepted. The retry classifies the previous question *plus* the new
+    #: one, so the previous question alone can carry the match; the margin makes
+    #: a rescue prove itself rather than inherit the last topic.
+    context_rescue_margin: float = Field(default=0.10, ge=0.0, le=0.5)
+    #: A fragment this short is treated as referential even without a pronoun.
+    context_followup_max_words: int = Field(default=3, ge=0, le=20)
     #: Carry entities from earlier turns into a new intent that accepts them.
     entity_carry_over_enabled: bool = True
 

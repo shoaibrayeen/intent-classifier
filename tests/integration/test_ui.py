@@ -103,10 +103,14 @@ def test_playground_renders_the_full_retrieval_trace(client, contract_domain):
         headers={"HX-Request": "true"},
     )
     assert response.status_code == 200
-    assert "CONTRACT_SEARCH" in response.text
-    assert "Confidence breakdown" in response.text
-    assert "Dense retrieval" in response.text
-    assert "BM25 retrieval" in response.text
+    body = response.text
+    # The reply lands in the chat thread...
+    assert "CONTRACT_SEARCH" in body
+    assert 'class="bubble user"' in body and 'class="bubble assistant' in body
+    # ...and the reasoning is swapped into the detail pane beside it.
+    assert 'id="detail-panel"' in body and 'hx-swap-oob="true"' in body
+    assert "Confidence breakdown" in body
+    assert "Retrieval" in body and ">Dense<" in body and ">BM25<" in body
 
 
 def test_playground_shows_unknown_with_its_reason(client, contract_domain):

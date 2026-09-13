@@ -35,6 +35,7 @@ from app.services.llm.entity_extractor import EntityExtractor
 from app.services.session_service import SessionService
 from app.services.strategies import AUTO, StrategySelector
 from app.services.tool_router import ToolRouter
+from app.services.turn_details import snapshot_of
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,9 @@ class ClassificationService:
                     retried: ClassificationOutcome = await run_in_threadpool(
                         self._classifier.classify, domain, contextual_text, strategy
                     )
-                if retried.matched:
+                # A rescue has to prove itself: the retry includes the previous
+                # question, which can carry the match on its own.
+                if retried.matched and retried.confidence >= self._sessions.rescue_floor:
                     outcome = retried
                     context.used_for_retrieval = True
                     context.retrieval_text = contextual_text
@@ -189,22 +192,6 @@ class ClassificationService:
         total_seconds = time.perf_counter() - started
         outcome.timings.total_ms = round(total_seconds * 1000, 3)
 
-        # --- remember this turn --------------------------------------------------
-        if context is not None:
-            self._sessions.record(
-                payload.session_id,
-                domain.id,
-                SessionTurn(
-                    turn=context.turn,
-                    text=payload.text,
-                    intent=outcome.intent_name,
-                    intent_id=outcome.intent.id if outcome.intent else None,
-                    confidence=outcome.confidence,
-                    entities=entities,
-                ),
-                principal=get_principal(),
-            )
-
         outcome_label = "matched" if outcome.matched else "unknown"
         metrics.classifications.labels(outcome=outcome_label, strategy=outcome.strategy).inc()
         metrics.classification_latency.labels(strategy=outcome.strategy).observe(total_seconds)
@@ -228,7 +215,7 @@ class ClassificationService:
             query=self._audit.record_query(payload.text),
         )
 
-        return ClassifyResponse(
+        response = ClassifyResponse(
             domain_id=domain.id,
             domain=domain.name,
             intent=outcome.intent_name,
@@ -246,3 +233,25 @@ class ClassificationService:
             context=context,
             debug=outcome.to_debug() if debug else None,
         )
+
+        # --- remember this turn --------------------------------------------------
+        # Recorded once, after the response is assembled, so the stored snapshot
+        # is exactly what the caller was shown rather than a reconstruction.
+        if context is not None:
+            snapshot = snapshot_of(response, outcome.to_debug())
+            snapshot["text"] = payload.text
+            self._sessions.record(
+                payload.session_id,
+                domain.id,
+                SessionTurn(
+                    turn=context.turn,
+                    text=payload.text,
+                    intent=outcome.intent_name,
+                    intent_id=outcome.intent.id if outcome.intent else None,
+                    confidence=outcome.confidence,
+                    entities=entities,
+                    details=snapshot,
+                ),
+                principal=get_principal(),
+            )
+        return response
