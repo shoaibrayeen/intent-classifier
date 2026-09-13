@@ -96,6 +96,19 @@
 <h2 id="unreleased">Unreleased</h2>
 <p class="muted">Documentation layout, the changelog itself, and playground fixes.</p>
 
+<h3>Fixed: the evaluation page did nothing in Docker</h3>
+<p>
+  The held-out dataset lived under <code>tests/</code>, which is not copied into the image, so in
+  a container the page loaded zero cases. It then rendered a table of zeroes that looked like a
+  run which simply matched nothing. The dataset now ships inside the application package, where
+  anything the running service needs belongs.
+</p>
+<p>
+  A run that could not happen no longer looks like a run that found nothing: the page says which
+  it was, names the file it looked in, and reports how many of the dataset's cases actually ran.
+  <code>EVALUATION_DATASET_PATH</code> points it at your own set.
+</p>
+
 <h3>Fixed: the reference pages linked to nowhere</h3>
 <p>
   The documents link to each other by filename, which is how they read from disk. Served at

@@ -6,6 +6,11 @@
 # runtime data: chroma store, embedding model cache, bm25 artifacts, audit log
 data/
 
+# generated code graph: ~4MB, rebuilt in seconds with `graphify update .`
+# Un-ignore it if the team wants the graph under review; graphify ships a merge
+# driver for exactly that.
+graphify-out/
+
 # python
 .venv/
 __pycache__/

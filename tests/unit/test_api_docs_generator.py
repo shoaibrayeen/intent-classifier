@@ -116,3 +116,44 @@ def test_the_env_files_carry_only_what_differs_from_the_defaults():
             assert not is_default(key.strip(), value), (
                 f"{name} sets {key.strip()} to its default; remove it"
             )
+
+
+def test_the_memory_file_documents_the_current_invariants():
+    """MEMORY.md records what is expensive to rediscover. If a guard named
+    there is gone, the file is lying and the bug is probably back."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    memory = (root / "MEMORY.md").read_text()
+
+    from app.config import Settings
+
+    for name in ["context_rescue_margin", "auto_rescue_margin", "seed_on_startup"]:
+        assert name in Settings.model_fields
+        assert name.upper() in memory, f"MEMORY.md does not mention {name}"
+
+    # The paths it points at must exist.
+    for path in [
+        "app/evaluation/dataset.json",
+        "app/services/turn_details.py",
+        "app/services/mcp_executor.py",
+        "scripts/build_properties.py",
+        "app/repositories/base.py",
+    ]:
+        assert path in memory, f"MEMORY.md does not mention {path}"
+        assert (root / path).exists(), f"MEMORY.md points at a missing {path}"
+
+
+def test_generated_artefacts_are_not_committed():
+    """graphify-out is ~4MB and rebuilt in seconds."""
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        ["git", "check-ignore", "graphify-out/graph.json"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, "graphify-out/ is not gitignored"

@@ -436,6 +436,7 @@ The whole directory is served at `/ui/docs/`, because the documents link to each
 other by filename. Serving them under one prefix keeps those links working in
 the browser exactly as they do on disk. The short paths above redirect there.
 | `README.md` | — | setup, configuration, and how to run it |
+| `MEMORY.md` | — | invariants, past bugs and the guards that exist because of them |
 
 `README.md` stays at the repository root rather than moving into `docs/`:
 `pyproject.toml` declares it as the project readme and the build backend
@@ -541,6 +542,7 @@ signal and every ranked intent, always beside the number rather than instead of
 it. Static assets are served with a version stamp, so a stylesheet change
 reaches a browser that already cached the old one.
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
+| `/ui/docs/` | the reference pages, linked to each other |
 | `/ui/operations` | index health, configuration in force, recent activity |
 | `/ui/api` | the generated API reference |
 | `/ui/properties` | every setting, its default, and what it does |
@@ -699,6 +701,11 @@ uv run python -m tests.evaluation.run_eval --sweep    # calibrate thresholds
 uv run python -m tests.evaluation.run_eval --compare  # compare retrieval strategies
 uv run python -m tests.evaluation.run_eval --verbose  # every prediction
 ```
+
+The dataset lives at `app/evaluation/dataset.json`, inside the application
+package rather than under `tests/`, because the `/ui/evaluation` page runs it at
+runtime and `tests/` is not shipped in the image. Point
+`EVALUATION_DATASET_PATH` at your own file to evaluate against real traffic.
 
 The evaluation set holds 42 queries that are **not** training examples,
 including 10 out-of-domain queries that must return `UNKNOWN`. Current results
