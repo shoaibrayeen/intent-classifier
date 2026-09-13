@@ -26,7 +26,8 @@ from app.errors import InvalidInputError
 from app.models.classification import ClassifyRequest
 from app.models.domain import DomainCreate, DomainUpdate
 from app.models.example import ExampleCreate
-from app.models.intent import IntentCreate, ToolRef
+from app.models.intent import IntentCreate, IntentUpdate, ToolRef
+from app.models.mcp import McpImportRequest, McpToolCreate, McpToolRead
 from app.observability import tracing
 from app.services.container import Container
 from app.services.domain_service import DomainService
@@ -34,6 +35,7 @@ from app.services.evaluation import run_evaluation
 from app.services.example_service import ExampleService
 from app.services.index_manager import IndexManager
 from app.services.intent_service import IntentService
+from app.services.mcp_service import schema_summary
 from app.services.strategies import BUILTIN_STRATEGIES
 from app.ui.templating import templates
 
@@ -106,6 +108,7 @@ def intent_page(
     examples: ExampleService = Depends(get_example_service),
     indexes: IndexManager = Depends(get_index_manager),
 ):
+    container = request.app.state.container
     return templates.TemplateResponse(
         request=request,
         name="pages/intent.html",
@@ -114,6 +117,12 @@ def intent_page(
             "intent": intents.read(domain_id, intent_id),
             "examples": examples.list(domain_id, intent_id),
             "status": indexes.status(domain_id),
+            "generator_available": container.intent_authoring.available,
+            "provider": container.intent_authoring.provider_name,
+            "mcp_tools": _mcp_rows(container),
+            "bound": container.mcp_tools.resolve(
+                intents.get(domain_id, intent_id).tool.mcp_tool_id or ""
+            ),
         },
     )
 
@@ -148,16 +157,7 @@ def operations(
     domains: DomainService = Depends(get_domain_service),
 ):
     """Index health, configuration and recent audit activity in one place."""
-    statuses = []
-    for domain in domains.list():
-        status = container.index_manager.status(domain.id)
-        statuses.append(
-            {
-                "domain": domain,
-                "status": status,
-                "in_sync": status.bm25_doc_count == status.dense_count,
-            }
-        )
+    statuses = _index_statuses(container, domains)
     return templates.TemplateResponse(
         request=request,
         name="pages/operations.html",
@@ -200,6 +200,29 @@ def api_reference(request: Request):
             ),
         },
         status_code=404,
+    )
+
+
+@router.get("/ui/operations/index-health", response_class=HTMLResponse)
+def operations_index_health(
+    request: Request,
+    container: Container = Depends(get_container),
+    domains: DomainService = Depends(get_domain_service),
+):
+    """Refresh target: index health polls rather than needing a page reload."""
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/index_health.html",
+        context={"statuses": _index_statuses(container, domains)},
+    )
+
+
+@router.get("/ui/operations/audit", response_class=HTMLResponse)
+def operations_audit(request: Request, container: Container = Depends(get_container)):
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/audit_feed.html",
+        context={"audit_entries": container.audit.tail(25)},
     )
 
 
@@ -336,6 +359,85 @@ def ui_delete_domain(
         "partials/domain_list.html",
         {"domains": domains.list()},
         _flash(f"Domain '{domain.name}' deleted."),
+    )
+
+
+@router.post("/ui/domains/{domain_id}/intents/generate", response_class=HTMLResponse)
+async def ui_generate_intents(
+    request: Request,
+    domain_id: str,
+    count: Annotated[int, Form()] = 5,
+    examples_per_intent: Annotated[int, Form()] = 6,
+    brief: Annotated[str, Form()] = "",
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+    container: Container = Depends(get_container),
+):
+    """Auto mode: draft, save and index this domain's intents."""
+    domain = domains.get(domain_id)
+    authoring = container.intent_authoring
+    if not authoring.available:
+        return HTMLResponse(
+            _flash("No LLM provider configured. Set OPENAI_API_KEY or LLM_PROVIDER=mock.", "error")
+        )
+    result = await authoring.generate_intents(
+        domain,
+        brief=brief.strip(),
+        count=max(1, min(count, 12)),
+        examples_per_intent=max(0, min(examples_per_intent, 25)),
+    )
+    if result.status != "ok":
+        return HTMLResponse(_flash(f"Generation {result.status}: {result.detail}", "error"))
+    message = (
+        f"Generated {result.created_count} intent(s) with "
+        f"{result.example_count} example(s). Edit any of them below."
+    )
+    if result.skipped:
+        message += f" Skipped {len(result.skipped)}: {result.skipped[0]}"
+    return _partial(
+        request,
+        "partials/intent_list.html",
+        {"domain": domain, "intents": intents.list(domain_id)},
+        _flash(message),
+    )
+
+
+@router.post(
+    "/ui/domains/{domain_id}/intents/{intent_id}/examples/generate",
+    response_class=HTMLResponse,
+)
+async def ui_generate_examples(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    count: Annotated[int, Form()] = 6,
+    domains: DomainService = Depends(get_domain_service),
+    intents: IntentService = Depends(get_intent_service),
+    examples: ExampleService = Depends(get_example_service),
+    container: Container = Depends(get_container),
+):
+    domain = domains.get(domain_id)
+    intent = intents.get(domain_id, intent_id)
+    authoring = container.intent_authoring
+    if not authoring.available:
+        return HTMLResponse(
+            _flash("No LLM provider configured. Set OPENAI_API_KEY or LLM_PROVIDER=mock.", "error")
+        )
+    result = await authoring.generate_examples(domain, intent, count=max(1, min(count, 25)))
+    if result.status != "ok":
+        return HTMLResponse(_flash(f"Generation {result.status}: {result.detail}", "error"))
+    message = f"Added {result.created_count} example(s)."
+    if result.skipped:
+        message += f" Skipped {len(result.skipped)} duplicate(s)."
+    return _partial(
+        request,
+        "partials/example_list.html",
+        {
+            "domain": domain,
+            "intent": intent,
+            "examples": examples.list(domain_id, intent_id),
+        },
+        _flash(message),
     )
 
 
@@ -498,3 +600,267 @@ def _parse_schema(raw: str) -> dict:
     if not isinstance(parsed, dict):
         raise InvalidInputError("entity schema must be a JSON object")
     return parsed
+
+
+# --------------------------------------------------------------- MCP registry
+@router.get("/ui/mcp", response_class=HTMLResponse)
+def mcp_page(request: Request, container: Container = Depends(get_container)):
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/mcp.html",
+        context={"tools": _mcp_rows(container)},
+    )
+
+
+@router.get("/ui/mcp/{tool_id}", response_class=HTMLResponse)
+def mcp_tool_page(request: Request, tool_id: str, container: Container = Depends(get_container)):
+    tool = container.mcp_tools.get(tool_id)
+    bound = []
+    for domain in container.domains.list():
+        for intent in container.intents.list(domain.id):
+            resolved = container.mcp_tools.resolve(intent.tool.mcp_tool_id or "")
+            if resolved is not None and resolved.id == tool.id:
+                bound.append({"domain": domain, "intent": intent})
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/mcp_tool.html",
+        context={
+            "tool": McpToolRead.of(tool, len(bound)),
+            "schema_rows": schema_summary(tool),
+            "bound": bound,
+        },
+    )
+
+
+@router.post("/ui/mcp", response_class=HTMLResponse)
+def ui_register_mcp_tool(
+    request: Request,
+    server: Annotated[str, Form()],
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()] = "",
+    transport: Annotated[str, Form()] = "unknown",
+    endpoint: Annotated[str, Form()] = "",
+    input_schema: Annotated[str, Form()] = "",
+    container: Container = Depends(get_container),
+):
+    tool = container.mcp_tools.create(
+        McpToolCreate(
+            server=server,
+            name=name,
+            description=description,
+            transport=transport,
+            endpoint=endpoint,
+            input_schema=_parse_schema(input_schema),
+        )
+    )
+    return _partial(
+        request,
+        "partials/mcp_list.html",
+        {"tools": _mcp_rows(container)},
+        _flash(f"Registered {tool.qualified_name}."),
+    )
+
+
+@router.post("/ui/mcp/import", response_class=HTMLResponse)
+def ui_import_mcp_tools(
+    request: Request,
+    server: Annotated[str, Form()],
+    tools: Annotated[str, Form()],
+    transport: Annotated[str, Form()] = "unknown",
+    endpoint: Annotated[str, Form()] = "",
+    replace: Annotated[str, Form()] = "",
+    container: Container = Depends(get_container),
+):
+    try:
+        payload = json.loads(tools)
+    except json.JSONDecodeError as exc:
+        raise InvalidInputError(f"tools/list must be valid JSON: {exc}") from exc
+    result = container.mcp_tools.import_tools(
+        McpImportRequest(
+            server=server,
+            transport=transport,
+            endpoint=endpoint,
+            tools=payload,
+            replace=bool(replace),
+        )
+    )
+    message = (
+        f"Imported {len(result.created)} new and updated {len(result.updated)} "
+        f"tool(s) for '{server}'."
+    )
+    if result.removed:
+        message += f" Removed {len(result.removed)}."
+    if result.skipped:
+        message += f" Skipped {len(result.skipped)}: {result.skipped[0]}"
+    return _partial(
+        request, "partials/mcp_list.html", {"tools": _mcp_rows(container)}, _flash(message)
+    )
+
+
+@router.delete("/ui/mcp/{tool_id}", response_class=HTMLResponse)
+def ui_delete_mcp_tool(
+    request: Request, tool_id: str, container: Container = Depends(get_container)
+):
+    tool = container.mcp_tools.get(tool_id)
+    container.mcp_tools.delete(tool_id)
+    return _partial(
+        request,
+        "partials/mcp_list.html",
+        {"tools": _mcp_rows(container)},
+        _flash(f"Deleted {tool.qualified_name}."),
+    )
+
+
+@router.post("/ui/domains/{domain_id}/intents/{intent_id}/mcp", response_class=HTMLResponse)
+def ui_bind_mcp_tool(
+    request: Request,
+    domain_id: str,
+    intent_id: str,
+    mcp_tool_id: Annotated[str, Form()] = "",
+    intents: IntentService = Depends(get_intent_service),
+    container: Container = Depends(get_container),
+):
+    """Bind this intent to a registered MCP tool, or clear the binding."""
+    reference = mcp_tool_id.strip()
+    intent = intents.get(domain_id, intent_id)
+    updated = intents.update(
+        domain_id,
+        intent_id,
+        IntentUpdate(
+            tool=ToolRef(
+                name=intent.tool.name,
+                version=intent.tool.version,
+                mcp_tool_id=reference or None,
+            )
+        ),
+    )
+    if reference:
+        tool = container.mcp_tools.resolve(reference)
+        message = (
+            f"Bound {updated.name} to {tool.qualified_name}."
+            if tool
+            else f"Saved, but no registered MCP tool matches '{reference}'."
+        )
+    else:
+        message = f"Cleared the MCP binding on {updated.name}."
+    return _partial(
+        request,
+        "partials/mcp_binding.html",
+        {
+            "domain": container.domains.get(domain_id),
+            "intent": updated,
+            "mcp_tools": container.mcp_tools.list(),
+            "bound": container.mcp_tools.resolve(updated.tool.mcp_tool_id or ""),
+        },
+        _flash(message),
+    )
+
+
+# ------------------------------------------------------------- global listings
+@router.get("/ui/intents", response_class=HTMLResponse)
+def intents_page(request: Request, container: Container = Depends(get_container)):
+    rows = []
+    for domain in container.domains.list():
+        for intent in container.intents.list(domain.id):
+            rows.append(
+                {
+                    "domain": domain,
+                    "intent": intent,
+                    "mcp": container.mcp_tools.resolve(intent.tool.mcp_tool_id or ""),
+                }
+            )
+    rows.sort(key=lambda r: (r["domain"].name.casefold(), r["intent"].name.casefold()))
+    return templates.TemplateResponse(
+        request=request, name="pages/intents.html", context={"rows": rows}
+    )
+
+
+@router.get("/ui/sessions", response_class=HTMLResponse)
+def sessions_page(request: Request, container: Container = Depends(get_container)):
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/sessions.html",
+        context={"sessions": _session_rows(container)},
+    )
+
+
+@router.get("/ui/sessions/list", response_class=HTMLResponse)
+def sessions_list(request: Request, container: Container = Depends(get_container)):
+    """Refresh target for the sessions page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/session_list.html",
+        context={"sessions": _session_rows(container)},
+    )
+
+
+@router.delete("/ui/sessions/{session_id}", response_class=HTMLResponse)
+def ui_clear_session_row(
+    request: Request, session_id: str, container: Container = Depends(get_container)
+):
+    removed = container.sessions.clear(session_id)
+    return _partial(
+        request,
+        "partials/session_list.html",
+        {"sessions": _session_rows(container)},
+        _flash(f"Cleared '{session_id}' ({removed} turn(s))."),
+    )
+
+
+def _mcp_rows(container: Container) -> list[McpToolRead]:
+    counts: dict[str, int] = {}
+    for domain in container.domains.list():
+        for intent in container.intents.list(domain.id):
+            tool = container.mcp_tools.resolve(intent.tool.mcp_tool_id or "")
+            if tool is not None:
+                counts[tool.id] = counts.get(tool.id, 0) + 1
+    return [McpToolRead.of(tool, counts.get(tool.id, 0)) for tool in container.mcp_tools.list()]
+
+
+def _session_rows(container: Container) -> list[dict]:
+    """Recent conversations, newest activity first."""
+    store = container.store
+    with store.lock:
+        result = store.sessions.get(include=["metadatas"])
+    latest: dict[str, dict] = {}
+    for meta in result.get("metadatas") or []:
+        session_id = str(meta.get("session_id", ""))
+        if not session_id:
+            continue
+        row = latest.setdefault(
+            session_id, {"session_id": session_id, "turns": 0, "created_at": 0.0}
+        )
+        row["turns"] += 1
+        if float(meta.get("created_at", 0)) >= row["created_at"]:
+            row["created_at"] = float(meta.get("created_at", 0))
+            row["last_intent"] = str(meta.get("intent", ""))
+    rows = []
+    for session_id, row in latest.items():
+        turns = container.sessions.all_turns(session_id)
+        entities: dict = {}
+        for turn in turns:
+            entities.update(turn.entities)
+        rows.append(
+            {
+                **row,
+                "last_text": turns[-1].text if turns else "",
+                "last_intent": turns[-1].intent if turns else row.get("last_intent", ""),
+                "entities": entities,
+            }
+        )
+    rows.sort(key=lambda r: r["created_at"], reverse=True)
+    return rows[:50]
+
+
+def _index_statuses(container: Container, domains: DomainService) -> list[dict]:
+    rows = []
+    for domain in domains.list():
+        status = container.index_manager.status(domain.id)
+        rows.append(
+            {
+                "domain": domain,
+                "status": status,
+                "in_sync": status.bm25_doc_count == status.dense_count,
+            }
+        )
+    return rows

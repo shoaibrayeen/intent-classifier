@@ -102,3 +102,33 @@ def test_reindex_endpoint_reports_a_ready_index(client, contract_domain):
     assert status["state"] == "ready"
     assert status["bm25_doc_count"] == 16
     assert status["tokenizer_version"] == "simple_v1"
+
+
+def test_updating_the_tool_mapping_keeps_a_valid_model(client, contract_domain):
+    """Regression: model_copy does not re-validate, so a nested tool supplied
+    as a dict used to be stored unvalidated and broke every later read."""
+    domain_id = contract_domain["domain"]["id"]
+    intent_id = contract_domain["search"]["id"]
+
+    updated = client.put(
+        f"/api/v1/domains/{domain_id}/intents/{intent_id}",
+        json={"tool": {"name": "new_tool", "version": "v3"}},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["tool"] == {
+        "name": "new_tool",
+        "version": "v3",
+        "mcp_tool_id": None,
+    }
+
+    # The record must still be readable, and the UI must still render it.
+    reread = client.get(f"/api/v1/domains/{domain_id}/intents/{intent_id}").json()
+    assert reread["tool"]["name"] == "new_tool"
+    assert client.get(f"/ui/domains/{domain_id}/intents/{intent_id}").status_code == 200
+    assert client.get(f"/ui/domains/{domain_id}").status_code == 200
+
+    # And classification must still route to it.
+    body = client.post(
+        "/api/v1/classify", json={"domain": "contract", "text": "Find all contracts with Microsoft"}
+    ).json()
+    assert body["tool"]["name"] == "new_tool"

@@ -9,18 +9,26 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">Intent Classifier</a>
+    <a class="brand" href="/">Intent&nbsp;Classifier</a>
     <nav>
-      <a href="/">Domains</a>
-      <a href="/ui/playground">Playground</a>
-      <a href="/ui/evaluation">Evaluation</a>
-      <a href="/ui/operations">Operations</a>
-      <a href="/ui/api">API docs</a>
-      <a href="/docs">Swagger</a>
+      {% set path = request.url.path %}
+      {% for href, label, match in [
+        ("/", "Domains", "/ui/domains"),
+        ("/ui/intents", "Intents", "/ui/intents"),
+        ("/ui/mcp", "MCP tools", "/ui/mcp"),
+        ("/ui/playground", "Playground", "/ui/playground"),
+        ("/ui/sessions", "Sessions", "/ui/sessions"),
+        ("/ui/evaluation", "Evaluation", "/ui/evaluation"),
+        ("/ui/operations", "Operations", "/ui/operations"),
+        ("/ui/api", "API", "/ui/api"),
+      ] %}
+      <a href="{{ href }}"
+         class="{% if path == href or (match != '/' and path.startswith(match)) %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
     </nav>
   </header>
 
-  <div id="flash" class="flash"></div>
+  <div class="flash-dock"><div id="flash" class="flash"></div></div>
 
   <main>
     {% block content %}{% endblock %}
@@ -28,6 +36,7 @@
 
   <footer>
     Hybrid retrieval: FastEmbed dense + BM25 sparse, fused with Reciprocal Rank Fusion.
+    Tool calls are resolved and reported, never executed.
   </footer>
 </body>
 </html>

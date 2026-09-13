@@ -24,6 +24,7 @@ from app.models.classification import (
     ContextInfo,
     EntityExtractionInfo,
     SessionTurn,
+    UnknownReason,
 )
 from app.observability import metrics, tracing
 from app.observability.audit import AuditLog
@@ -32,7 +33,7 @@ from app.services.classifier import ClassificationOutcome, IntentClassifier
 from app.services.domain_service import DomainService
 from app.services.llm.entity_extractor import EntityExtractor
 from app.services.session_service import SessionService
-from app.services.strategies import StrategySelector
+from app.services.strategies import AUTO, StrategySelector
 from app.services.tool_router import ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,40 @@ class ClassificationService:
         self._strategies = strategies
         self._audit = audit
         self._sessions = sessions
+
+    async def _classify_auto(self, domain, text: str) -> tuple[ClassificationOutcome, list[str]]:
+        """Answer with hybrid; fall back only when it cannot place the query.
+
+        Picking whichever strategy merely reports the highest confidence would
+        be worse than useless: it would systematically prefer the most
+        overconfident retriever and quietly destroy UNKNOWN detection. So
+        hybrid, which measures best, always answers first, and an alternate is
+        accepted only when hybrid declined and the alternate clears the normal
+        thresholds *plus* a margin. The margin matters: without it, falling
+        back raised top-1 accuracy but dropped UNKNOWN detection from 90% to
+        70% on the evaluation set, which for a tool-calling system means
+        confidently invoking the wrong tool. A genuinely unanswerable query
+        still comes back UNKNOWN.
+        """
+        tried: list[str] = []
+        first: ClassificationOutcome | None = None
+        rescue_floor = self._settings.confidence_threshold + self._settings.auto_rescue_margin
+        for candidate in self._strategies.auto_sequence():
+            with tracing.span("classify", domain=domain.name, strategy=candidate.name):
+                outcome: ClassificationOutcome = await run_in_threadpool(
+                    self._classifier.classify, domain, text, candidate
+                )
+            if first is None:
+                first = outcome
+                if outcome.matched:
+                    return outcome, tried
+            elif outcome.matched and outcome.confidence >= rescue_floor:
+                return outcome, tried
+            tried.append(candidate.name)
+            if outcome.reason == UnknownReason.NO_EXAMPLES:
+                break  # nothing to retrieve against; another strategy cannot help
+        # Nothing resolved: report hybrid's verdict, which is the one to trust.
+        return first, tried[1:]
 
     async def classify(self, payload: ClassifyRequest, debug: bool = False) -> ClassifyResponse:
         started = time.perf_counter()
@@ -85,10 +120,14 @@ class ClassificationService:
             )
 
         # --- retrieval -------------------------------------------------------
-        with tracing.span("classify", domain=domain.name, strategy=strategy.name):
-            outcome: ClassificationOutcome = await run_in_threadpool(
-                self._classifier.classify, domain, payload.text, strategy
-            )
+        tried: list[str] = []
+        if strategy.name == AUTO:
+            outcome, tried = await self._classify_auto(domain, payload.text)
+        else:
+            with tracing.span("classify", domain=domain.name, strategy=strategy.name):
+                outcome = await run_in_threadpool(
+                    self._classifier.classify, domain, payload.text, strategy
+                )
 
         # A follow-up like "when do they expire" has no anchor on its own.
         # Retry with the previous question, and keep the result only if it
@@ -167,8 +206,8 @@ class ClassificationService:
             )
 
         outcome_label = "matched" if outcome.matched else "unknown"
-        metrics.classifications.labels(outcome=outcome_label, strategy=strategy.name).inc()
-        metrics.classification_latency.labels(strategy=strategy.name).observe(total_seconds)
+        metrics.classifications.labels(outcome=outcome_label, strategy=outcome.strategy).inc()
+        metrics.classification_latency.labels(strategy=outcome.strategy).observe(total_seconds)
         metrics.confidence_observed.observe(outcome.confidence)
 
         self._audit.record(
@@ -177,7 +216,8 @@ class ClassificationService:
             outcome=outcome_label,
             intent=outcome.intent_name,
             confidence=outcome.confidence,
-            strategy=strategy.name,
+            strategy=outcome.strategy,
+            requested_strategy=strategy.name,
             reason=str(outcome.reason) if outcome.reason else None,
             entity_count=len(entities),
             tool=tool.name if tool else None,
@@ -200,6 +240,8 @@ class ClassificationService:
             reason=outcome.reason,
             top_intents=outcome.ranked[:5],
             latency_ms=outcome.timings.total_ms,
+            strategy=outcome.strategy,
+            strategies_tried=tried,
             request_id=request_id or None,
             context=context,
             debug=outcome.to_debug() if debug else None,

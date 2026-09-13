@@ -1,0 +1,31 @@
+<form hx-post="/ui/domains/{{ domain.id }}/intents/{{ intent.id }}/mcp"
+      hx-target="#mcp-binding" hx-swap="innerHTML">
+  <label>MCP tool
+    <select name="mcp_tool_id">
+      <option value="">not bound</option>
+      {% for tool in mcp_tools %}
+      <option value="{{ tool.id }}" {% if bound and bound.id == tool.id %}selected{% endif %}>
+        {{ tool.qualified_name }}{% if tool.description %} — {{ tool.description[:60] }}{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="form-actions">
+    <button type="submit">Save binding</button>
+    {% if bound %}<a class="button-link" href="/ui/mcp/{{ bound.id }}">Open tool</a>{% endif %}
+  </div>
+</form>
+{% if bound %}
+  <p class="muted small">
+    Classifications of this intent report the call
+    <span class="mono">{{ bound.qualified_name }}</span> with the extracted entities mapped onto
+    its arguments. The call is reported, never made.
+  </p>
+{% elif intent.tool.mcp_tool_id %}
+  <p class="small"><span class="badge danger">unresolved</span>
+    Bound to <span class="mono">{{ intent.tool.mcp_tool_id }}</span>, which is not in the registry.</p>
+{% elif not mcp_tools %}
+  <p class="muted small">No MCP tools registered yet. Add some on the <a href="/ui/mcp">MCP tools</a> page.</p>
+{% else %}
+  <p class="muted small">Not bound. Classifications report the tool label only, with no MCP call.</p>
+{% endif %}

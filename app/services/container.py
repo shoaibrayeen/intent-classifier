@@ -11,6 +11,7 @@ from app.observability.audit import AuditLog
 from app.repositories.chroma_domains import ChromaDomainRepository
 from app.repositories.chroma_examples import ChromaExampleRepository
 from app.repositories.chroma_intents import ChromaIntentRepository
+from app.repositories.chroma_mcp import ChromaMcpToolRepository
 from app.repositories.chroma_sessions import ChromaSessionRepository
 from app.security.auth import Authenticator
 from app.services.classification_service import ClassificationService
@@ -19,11 +20,15 @@ from app.services.domain_service import DomainService
 from app.services.embedding import Embedder
 from app.services.example_service import ExampleService
 from app.services.index_manager import IndexManager
+from app.services.intent_authoring import IntentAuthoringService
 from app.services.intent_service import IntentService
 from app.services.llm.client import LLMClient, OpenAIChatClient, StubLLMClient
 from app.services.llm.entity_extractor import EntityExtractor
 from app.services.llm.instruction_generator import InstructionGenerator
+from app.services.llm.intent_generator import IntentGenerator
 from app.services.llm.mock import MockLLMClient
+from app.services.mcp_executor import DescribeOnlyExecutor, McpExecutor
+from app.services.mcp_service import McpToolService
 from app.services.session_service import SessionService
 from app.services.strategies import StrategySelector
 from app.services.tool_router import ToolRouter
@@ -44,6 +49,10 @@ class Container:
     index_manager: IndexManager
     entity_extractor: EntityExtractor
     instruction_generator: InstructionGenerator
+    intent_generator: IntentGenerator
+    intent_authoring: IntentAuthoringService
+    mcp_tools: McpToolService
+    mcp_executor: McpExecutor
     tool_router: ToolRouter
     strategies: StrategySelector
     audit: AuditLog
@@ -51,7 +60,11 @@ class Container:
     sessions: SessionService
 
 
-def build_container(settings: Settings, llm_client: LLMClient | None = None) -> Container:
+def build_container(
+    settings: Settings,
+    llm_client: LLMClient | None = None,
+    mcp_executor: McpExecutor | None = None,
+) -> Container:
     store = ChromaStore(settings)
     domain_repo = ChromaDomainRepository(store)
     intent_repo = ChromaIntentRepository(store)
@@ -69,7 +82,14 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
         llm_client = select_llm_client(settings)
     entity_extractor = EntityExtractor(settings, llm_client)
     instruction_generator = InstructionGenerator(llm_client)
-    tool_router = ToolRouter()
+    intent_generator = IntentGenerator(llm_client)
+    mcp_service = McpToolService(store, ChromaMcpToolRepository(store))
+    intent_authoring = IntentAuthoringService(
+        intent_generator, intent_service, example_service, mcp_service
+    )
+    # Describe-only by default. A real MCP client is passed in here.
+    mcp_executor = mcp_executor or DescribeOnlyExecutor()
+    tool_router = ToolRouter(mcp_service)
     strategies = StrategySelector(settings)
     audit = AuditLog(settings)
     authenticator = Authenticator(settings)
@@ -98,6 +118,10 @@ def build_container(settings: Settings, llm_client: LLMClient | None = None) -> 
         index_manager=index_manager,
         entity_extractor=entity_extractor,
         instruction_generator=instruction_generator,
+        intent_generator=intent_generator,
+        intent_authoring=intent_authoring,
+        mcp_tools=mcp_service,
+        mcp_executor=mcp_executor,
         tool_router=tool_router,
         strategies=strategies,
         audit=audit,

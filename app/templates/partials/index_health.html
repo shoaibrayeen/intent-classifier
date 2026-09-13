@@ -1,0 +1,18 @@
+<table>
+  <thead><tr><th>Domain</th><th class="nowrap">State</th><th class="num">Version</th><th class="num">BM25 docs</th><th class="num">Vectors</th><th class="nowrap">In sync</th><th class="nowrap">Built</th></tr></thead>
+  <tbody>
+    {% for row in statuses %}
+    <tr>
+      <td><a href="/ui/domains/{{ row.domain.id }}">{{ row.domain.name }}</a></td>
+      <td class="nowrap"><span class="badge {{ 'ok' if row.status.state == 'ready' else 'warn' }}">{{ row.status.state }}</span></td>
+      <td class="num">{{ row.status.version }}</td>
+      <td class="num">{{ row.status.bm25_doc_count }}</td>
+      <td class="num">{{ row.status.dense_count }}</td>
+      <td class="nowrap">{% if row.in_sync %}<span class="badge ok">yes</span>{% else %}<span class="badge warn">drifted</span>{% endif %}</td>
+      <td class="muted small nowrap">{{ (row.status.built_at or "")[11:19] or "—" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="empty">No domains configured.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

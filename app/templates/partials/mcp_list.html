@@ -1,0 +1,26 @@
+<table>
+  <thead>
+    <tr>
+      <th>Qualified name</th><th>Description</th><th class="nowrap">Transport</th>
+      <th class="num">Arguments</th><th class="num">Bound</th><th class="actions"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tool in tools %}
+    <tr>
+      <td><a class="mono" href="/ui/mcp/{{ tool.id }}">{{ tool.qualified_name }}</a></td>
+      <td class="muted">{{ tool.description or "—" }}</td>
+      <td class="nowrap"><span class="badge">{{ tool.transport }}</span></td>
+      <td class="num">{{ tool.input_schema.get("properties", {}) | length }}</td>
+      <td class="num">{{ tool.bound_intents }}</td>
+      <td class="actions">
+        <button class="danger small" hx-delete="/ui/mcp/{{ tool.id }}"
+                hx-target="#mcp-list" hx-swap="innerHTML"
+                hx-confirm="Delete {{ tool.qualified_name }}? Intents bound to it will report an unresolved tool.">Delete</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No MCP tools registered. Import a server's catalogue below.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

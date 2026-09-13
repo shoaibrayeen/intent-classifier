@@ -25,6 +25,7 @@ DOMAINS_COLLECTION = "domains"
 INTENTS_COLLECTION = "intents"
 EXAMPLES_COLLECTION = "intent_examples"
 SESSIONS_COLLECTION = "session_turns"
+MCP_TOOLS_COLLECTION = "mcp_tools"
 
 #: Config collections hold no vectors, but Chroma requires an embedding on every
 #: add when the collection has no embedding function. A constant 1-d vector is
@@ -65,6 +66,11 @@ class ChromaStore:
         self.sessions: Collection = self.client.get_or_create_collection(
             SESSIONS_COLLECTION, embedding_function=None
         )
+        # The MCP tool registry. Global rather than per-domain: one server
+        # commonly backs intents in several domains.
+        self.mcp_tools: Collection = self.client.get_or_create_collection(
+            MCP_TOOLS_COLLECTION, embedding_function=None
+        )
 
     def heartbeat(self) -> bool:
         try:
@@ -77,7 +83,13 @@ class ChromaStore:
     def reset_all(self) -> None:
         """Drop every record. Used by the seed script's --reset and by tests."""
         with self.lock:
-            for collection in (self.sessions, self.examples, self.intents, self.domains):
+            for collection in (
+                self.mcp_tools,
+                self.sessions,
+                self.examples,
+                self.intents,
+                self.domains,
+            ):
                 ids = collection.get(include=[])["ids"]
                 if ids:
                     collection.delete(ids=ids)

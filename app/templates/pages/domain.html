@@ -34,7 +34,32 @@
 </section>
 
 <section class="card">
-  <h2>Create intent</h2>
+  <h2>Generate intents <span class="badge">auto</span></h2>
+  <p class="muted small">
+    Drafts the operations users ask for in this domain, each with a tool mapping, an entity
+    schema and training examples, then saves and indexes them. Everything is editable
+    afterwards exactly like a hand-written intent. Names that already exist are skipped.
+  </p>
+  <form hx-post="/ui/domains/{{ domain.id }}/intents/generate"
+        hx-target="#intent-list" hx-swap="innerHTML" hx-indicator="#intents-busy">
+    <div class="row">
+      <label>How many intents<input name="count" type="number" value="5" min="1" max="12"></label>
+      <label>Examples each<input name="examples_per_intent" type="number" value="6" min="0" max="25"></label>
+    </div>
+    <label>Brief <span class="muted small">(defaults to the domain description)</span>
+      <input name="brief" maxlength="2000" placeholder="{{ domain.description or 'what do users do in this domain?' }}">
+    </label>
+    <button type="submit" {% if not generator_available %}disabled{% endif %}>
+      Generate intents ({{ provider }}) <span id="intents-busy" class="htmx-indicator">…</span>
+    </button>
+    {% if not generator_available %}
+    <p class="muted small">Needs a provider: set OPENAI_API_KEY, or LLM_PROVIDER=mock to draft offline.</p>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  <h2>Create intent <span class="badge">manual</span></h2>
   <form hx-post="/ui/domains/{{ domain.id }}/intents" hx-target="#intent-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
     <label>Name<input name="name" required placeholder="CONTRACT_SEARCH" maxlength="120"></label>
     <label>Description<input name="description" placeholder="Search contracts based on user criteria" maxlength="2000"></label>

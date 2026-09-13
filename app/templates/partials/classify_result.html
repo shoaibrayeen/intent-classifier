@@ -9,8 +9,14 @@
     </div>
     <div>
       <div class="label">Confidence</div>
-      <div class="result-confidence">{{ result.confidence | pct }}</div>
-      <div class="confidence-bar"><span style="width: {{ (result.confidence * 100) | round(0) }}%"></span></div>
+      {% set band = "high" if result.confidence >= 0.8 else ("medium" if result.confidence >= 0.5 else "low") %}
+      <div class="result-confidence {{ band }}">{{ result.confidence | pct }}</div>
+      <div class="confidence-bar {{ band }}"><span style="width: {{ (result.confidence * 100) | round(0) }}%"></span></div>
+      <div class="muted small">
+        {% if band == "high" %}strong match
+        {% elif band == "medium" %}uncertain match, worth reviewing
+        {% else %}weak match{% endif %}
+      </div>
       <div class="muted small">threshold {{ settings.confidence_threshold | pct }}</div>
     </div>
     <div>
@@ -86,6 +92,32 @@
       {% if result.entity_extraction.rejected %}
       <p class="muted small">rejected: {{ result.entity_extraction.rejected | join("; ") }}</p>
       {% endif %}
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>MCP call</h2>
+    {% if result.tool and result.tool.mcp %}
+      {% set mcp = result.tool.mcp %}
+      {% if mcp.unresolved %}
+        <p class="small"><span class="badge danger">unresolved</span> {{ mcp.unresolved }}</p>
+      {% else %}
+      <div class="chips">
+        <a class="badge mono" href="/ui/mcp/{{ mcp.tool_id }}">{{ mcp.qualified_name }}</a>
+        <span class="badge">{{ mcp.transport }}</span>
+        {% if mcp.ready %}<span class="badge ok">ready</span>{% else %}<span class="badge warn">not ready</span>{% endif %}
+      </div>
+      <pre class="mono">{{ {"server": mcp.server, "tool": mcp.tool, "arguments": mcp.arguments} | json_pretty }}</pre>
+      {% if mcp.missing_required %}
+      <p class="small">Missing required: <span class="mono">{{ mcp.missing_required | join(", ") }}</span></p>
+      {% endif %}
+      {% if mcp.unmapped %}
+      <p class="muted small">Not accepted by this tool: <span class="mono">{{ mcp.unmapped | join(", ") }}</span></p>
+      {% endif %}
+      <p class="muted small">Resolved and reported. This service does not call it.</p>
+      {% endif %}
+    {% else %}
+    <p class="muted">This intent is not bound to an MCP tool.</p>
     {% endif %}
   </section>
 

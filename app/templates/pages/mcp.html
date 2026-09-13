@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}MCP tools · Intent Classifier{% endblock %}
+{% block content %}
+<h1>MCP tools</h1>
+<p class="muted">
+  The downstream capabilities an intent can be wired to. A bound intent makes every
+  classification report the exact MCP call that would satisfy it: server, tool, and arguments
+  mapped from the extracted entities. This service resolves and reports that call. It never
+  makes it.
+</p>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Registry</h2>
+    <div class="card-actions"><span class="badge">{{ tools | length }} tool(s)</span></div>
+  </div>
+  <div id="mcp-list">{% include "partials/mcp_list.html" %}</div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Import from a server</h2>
+    <p class="muted small">
+      Paste the <span class="mono">tools/list</span> response from an MCP server. The result
+      object, its bare <span class="mono">tools</span> array, or a JSON-RPC envelope all work.
+      Re-importing updates tools in place.
+    </p>
+    <form hx-post="/ui/mcp/import" hx-target="#mcp-list" hx-swap="innerHTML" hx-indicator="#import-busy">
+      <div class="row">
+        <label>Server<input name="server" required placeholder="contracts" maxlength="120"></label>
+        <label>Transport
+          <select name="transport">
+            <option value="stdio">stdio</option>
+            <option value="http">http</option>
+            <option value="sse">sse</option>
+            <option value="unknown" selected>unknown</option>
+          </select>
+        </label>
+      </div>
+      <label>Endpoint <span class="muted small">(command or URL, recorded not dialled)</span>
+        <input name="endpoint" placeholder="npx -y @acme/contracts-mcp" maxlength="1000">
+      </label>
+      <label>tools/list JSON
+        <textarea name="tools" rows="8" required placeholder='{"tools": [{"name": "search_contracts", "description": "…", "inputSchema": {"type": "object", "properties": {"counterparty": {"type": "string"}}, "required": ["counterparty"]}}]}'></textarea>
+      </label>
+      <label class="inline">
+        <input type="checkbox" name="replace" value="1">
+        Remove this server's other tools that the payload omits
+      </label>
+      <div class="form-actions">
+        <button type="submit">Import <span id="import-busy" class="htmx-indicator">…</span></button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Register one by hand</h2>
+    <p class="muted small">For a tool you know about but have no <span class="mono">tools/list</span> output for.</p>
+    <form hx-post="/ui/mcp" hx-target="#mcp-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
+      <div class="row">
+        <label>Server<input name="server" required placeholder="contracts" maxlength="120"></label>
+        <label>Tool name<input name="name" required placeholder="search_contracts" maxlength="200"></label>
+      </div>
+      <label>Description<input name="description" placeholder="Search contracts by counterparty" maxlength="2000"></label>
+      <div class="row">
+        <label>Transport
+          <select name="transport">
+            <option value="stdio">stdio</option>
+            <option value="http">http</option>
+            <option value="sse">sse</option>
+            <option value="unknown" selected>unknown</option>
+          </select>
+        </label>
+        <label>Endpoint<input name="endpoint" placeholder="npx -y @acme/contracts-mcp" maxlength="1000"></label>
+      </div>
+      <label>Input schema (JSON Schema)
+        <textarea name="input_schema" rows="6" placeholder='{"type": "object", "properties": {"counterparty": {"type": "string"}}, "required": ["counterparty"]}'></textarea>
+      </label>
+      <div class="form-actions"><button type="submit">Register tool</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -451,15 +451,51 @@ arguments.</p>
 <p>The extraction prompt is layered: base rules shared by every domain, then the domain's
 <code>system_instructions</code>, then the intent's <code>extraction_hints</code>, all in the
 system turn; the domain's <code>user_instructions</code> and the conversation history precede
-the request in the user turn. A contract domain can state that a counterparty is never our own
-company; an employee domain can state that "me" is the person asking. Neither needs a code
-change.</p>
+the request in the user turn.</p>
+
+<p>System instructions open with the role the domain implies, because how the assistant should
+act is the first thing the extractor needs to know. A domain about contractual work gets "You are
+acting as a contracts and legal analyst"; one about carts and checkout gets "You are acting as an
+e-commerce shopping assistant". The same sentence means different things to each. The vocabulary
+follows the role: that a counterparty is never our own company, or that "me" is the person asking
+rather than an employee name. Neither needs a code change.</p>
+
+<h3>Authoring the catalogue: two modes, one object</h3>
+<p>Domains, intents and examples can each be written by hand or drafted by the LLM. The
+generated ones are not a separate class of thing: they are saved to the same collections and
+edited through the same endpoints and screens, so auto mode is a starting point rather than a
+commitment.</p>
+
+<p>Generating an intent always generates its examples too. That is not a convenience: retrieval
+matches against examples, so an intent with none can never be returned, and a catalogue of
+example-less intents would classify nothing at all. Generating both is what makes a fresh domain
+usable immediately.</p>
+
+<table>
+  <thead><tr><th>Guard</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Existing names are skipped, never overwritten</td>
+        <td>Running auto mode twice extends the catalogue instead of destroying hand-written work.</td></tr>
+    <tr><td>Names coerced to the intent model's pattern</td>
+        <td>A model will happily return "contract search"; the store requires CONTRACT_SEARCH.</td></tr>
+    <tr><td>Entity schemas filtered to declared types</td>
+        <td>An invented type would produce arguments no tool can accept.</td></tr>
+    <tr><td>Examples deduplicated by index normalisation</td>
+        <td>Deduplicating the way the index does, so a "new" example that would collide once stored is caught before it is written.</td></tr>
+    <tr><td>Unusable items reported, not silently dropped</td>
+        <td>The caller sees what was skipped and why, rather than wondering where an intent went.</td></tr>
+    <tr><td><code>dry_run</code> returns the proposal unwritten</td>
+        <td>Auto mode can be inspected before it touches anything.</td></tr>
+  </tbody>
+</table>
 
 <h3>An offline provider for the whole flow</h3>
-<p><code>LLM_PROVIDER=mock</code> substitutes a rule-based extractor that reads exactly the
-prompt a model would receive. It is not clever, and that is deliberate: its job is to make
-instructions, history, validation, carry-over and tool routing all execute for real without a
-key, with output stable enough to test against.</p>
+<p><code>LLM_PROVIDER=mock</code> substitutes a rule-based stand-in that reads exactly the
+prompts a model would receive, and answers all three generation tasks: extraction, domain
+instructions, and intent drafting. It is not clever, and that is deliberate: its job is to make
+instructions, history, validation, carry-over, intent authoring and tool routing all execute for
+real without a key, with output stable enough to test against. It names generated records after
+the domain, so a real provider produces better domain vocabulary.</p>
 
 <h2>How the API is documented</h2>
 <p>Four surfaces, one source. The OpenAPI schema is produced by the app from the same Pydantic
@@ -521,6 +557,96 @@ later.</p>
 <figcaption>Two mechanisms, both visible in the response. Neither runs when the caller omits a
 session id, so single-shot classification is unchanged.</figcaption>
 </figure>
+
+<h2>Wiring intents to MCP tools</h2>
+
+<p>An intent can be bound to a registered Model Context Protocol tool. The registry records what
+each tool is and, crucially, its own JSON Schema, so a classification can report the exact call
+that would satisfy it rather than a tool name and a hope.</p>
+
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="How an MCP call is resolved">
+  <defs>
+    <marker id="e" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </marker>
+  </defs>
+  <g color="var(--muted)">
+  <rect class="box" x="20" y="20" width="210" height="62" rx="9"/>
+  <text class="t-hd" x="38" y="44">intent + entities</text>
+  <text class="t-sm" x="38" y="63">counterparty: Microsoft</text>
+  <text class="t-sm" x="38" y="77">status: ACTIVE</text>
+
+  <path class="arrow" d="M230,50 L278,50" marker-end="url(#e)"/>
+
+  <rect class="box" x="280" y="20" width="230" height="62" rx="9"/>
+  <text class="t-hd" x="298" y="44">registered tool's schema</text>
+  <text class="t-sm" x="298" y="63">properties + required, as the</text>
+  <text class="t-sm" x="298" y="77">MCP server itself reported them</text>
+
+  <path class="arrow" d="M510,50 L558,50" marker-end="url(#e)"/>
+
+  <rect class="box-dense" x="560" y="20" width="180" height="62" rx="9"/>
+  <text class="t-hd" x="578" y="44">resolved call</text>
+  <text class="t-sm" x="578" y="63">server, tool, arguments,</text>
+  <text class="t-sm" x="578" y="77">ready or not</text>
+
+  <rect class="box" x="20" y="110" width="350" height="120" rx="9"/>
+  <text class="t-hd" x="38" y="134">Matched against the tool, not the intent</text>
+  <text class="t-sm" x="38" y="156">An entity the tool does not declare is reported as unmapped,</text>
+  <text class="t-sm" x="38" y="171">never sent. A missing required argument leaves the call not</text>
+  <text class="t-sm" x="38" y="186">ready. A binding whose tool was deleted says so, instead of</text>
+  <text class="t-sm" x="38" y="201">quietly losing the call a caller was waiting for.</text>
+  <text class="t-sm" x="38" y="222">The intent's own schema drives extraction; the tool's drives the call.</text>
+
+  <rect class="box-sparse" x="390" y="110" width="350" height="120" rx="9"/>
+  <text class="t-hd" x="408" y="134">A seam, not a wall</text>
+  <text class="t-sm" x="408" y="156">Nothing here dials the server. The transport and endpoint are</text>
+  <text class="t-sm" x="408" y="171">recorded so the caller knows where the tool lives, and the</text>
+  <text class="t-sm" x="408" y="186">resolved call already carries everything an invocation needs.</text>
+  <text class="t-sm" x="408" y="201">Real execution is one protocol implementation away; the default</text>
+  <text class="t-sm" x="408" y="222">refuses every call, so adding one cannot surprise a caller.</text>
+  </g>
+</svg>
+<figcaption>Auto mode binds as it generates, and a proposed tool is accepted only if it is
+actually in the registry, so a generated intent is never wired to a tool nothing serves.</figcaption>
+</figure>
+
+<h2>Choosing a strategy per query</h2>
+
+<p>Hybrid fusion is the shipped default because it measures best. <code>DEFAULT_STRATEGY=auto</code>
+answers with hybrid and falls back only when hybrid cannot place a query, reporting which
+strategy resolved it. Two rules keep that from becoming a way to say yes to everything, and both
+were forced by measurement rather than taste.</p>
+
+<table>
+  <thead><tr><th>Rule</th><th>What it prevents</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Fallbacks must use dense retrieval</td>
+      <td>A lexical-only pass cannot apply the minimum-similarity floor. On one shared word it
+      matched "what is the weather today" to CONTRACT_EXPIRY at 0.86 confidence.</td>
+    </tr>
+    <tr>
+      <td>A rescue must clear the threshold plus a margin</td>
+      <td>Without it, auto raised top-1 accuracy while dropping UNKNOWN detection from 90% to
+      70%. For a system that routes to tools, that trade means confidently calling the wrong one.</td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead><tr><th>Strategy</th><th>Top-1</th><th>UNKNOWN detection</th><th>Valid queries refused</th></tr></thead>
+  <tbody>
+    <tr><td>hybrid_rrf (default)</td><td>90.6%</td><td>90%</td><td>3.1%</td></tr>
+    <tr><td>auto, no margin</td><td>93.8%</td><td>70%</td><td>0%</td></tr>
+    <tr><td>auto, margin 0.10</td><td>93.8%</td><td>90%</td><td>0%</td></tr>
+  </tbody>
+</table>
+
+<p>With the margin, auto beat hybrid on every measure here. That is 42 cases, which is enough to
+choose a margin and not enough to change a default, so hybrid still ships as the default and auto
+is one setting away.</p>
 
 <h2>Running it in production</h2>
 

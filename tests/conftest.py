@@ -36,7 +36,9 @@ def reset_shared_store() -> None:
     _reset_store.reset_all()
 
 
-@pytest.hookimpl(trylast=True)
+_exit_status = 0
+
+
 def pytest_sessionfinish(session, exitstatus):
     """Shut Chroma down, then leave without running interpreter finalization.
 
@@ -52,7 +54,8 @@ def pytest_sessionfinish(session, exitstatus):
     do not run, so this is skipped when coverage is active (it writes its data
     at exit) and can be disabled with INTENT_CLASSIFIER_SOFT_EXIT=1.
     """
-    global _reset_store
+    global _reset_store, _exit_status
+    _exit_status = int(exitstatus)
     try:
         import gc
 
@@ -73,11 +76,21 @@ def pytest_sessionfinish(session, exitstatus):
     except Exception:
         pass
 
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    """Leave without running interpreter finalization.
+
+    This is deliberately in unconfigure rather than sessionfinish: pytest
+    writes its result summary from a sessionfinish hook *wrapper*, which
+    completes after every plain implementation, so exiting there would throw
+    away the "N passed" line.
+    """
     if os.environ.get("INTENT_CLASSIFIER_SOFT_EXIT") or "coverage" in sys.modules:
         return
     sys.stdout.flush()
     sys.stderr.flush()
-    os._exit(int(exitstatus))
+    os._exit(_exit_status)
 
 
 def make_settings(**overrides) -> Settings:

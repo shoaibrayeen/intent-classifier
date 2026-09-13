@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.mcp import McpCall
+
 UNKNOWN_INTENT = "UNKNOWN"
 
 
@@ -107,6 +109,10 @@ class ToolCall(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
     missing_required: list[str] = Field(default_factory=list)
     ready: bool = True
+    #: Present when the intent is bound to a registered MCP tool: the exact
+    #: invocation that would satisfy this classification, for the caller to
+    #: make. Still never performed here.
+    mcp: McpCall | None = None
 
 
 class SessionTurn(BaseModel):
@@ -168,6 +174,12 @@ class ClassifyResponse(BaseModel):
     reason: UnknownReason | None = None
     top_intents: list[IntentScore] = Field(default_factory=list)
     latency_ms: float = 0.0
+    #: Which retrieval strategy produced this answer. Worth seeing on every
+    #: response, not just the debug one, because under "auto" it varies per
+    #: query and explains why a result looks the way it does.
+    strategy: str = ""
+    #: Strategies tried and rejected before this one resolved, under "auto".
+    strategies_tried: list[str] = Field(default_factory=list)
     request_id: str | None = None
     context: ContextInfo | None = None
     debug: ClassifyDebug | None = None

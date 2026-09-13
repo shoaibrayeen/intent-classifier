@@ -1,0 +1,23 @@
+<table>
+  <thead>
+    <tr><th>Session</th><th class="num">Turns</th><th>Last request</th><th>Last intent</th><th>Entities in play</th><th class="actions"></th></tr>
+  </thead>
+  <tbody>
+    {% for row in sessions %}
+    <tr>
+      <td class="mono">{{ row.session_id }}</td>
+      <td class="num">{{ row.turns }}</td>
+      <td>{{ row.last_text }}</td>
+      <td class="mono small">{{ row.last_intent }}</td>
+      <td class="mono small">{{ row.entities | json_pretty if row.entities else "—" }}</td>
+      <td class="actions">
+        <button class="danger small" hx-delete="/ui/sessions/{{ row.session_id }}"
+                hx-target="#session-list" hx-swap="innerHTML"
+                hx-confirm="Forget this conversation?">Clear</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No conversations yet. Pass a session id from the playground.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

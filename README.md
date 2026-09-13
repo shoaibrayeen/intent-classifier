@@ -161,6 +161,46 @@ saves by hand. Explicit instructions always win over generation, a missing
 provider fails before anything is created, and a provider outage never destroys
 a created domain. `LLM_PROVIDER=mock` drafts deterministic templates offline.
 
+### Intents: auto mode or by hand
+
+Intents work the same two ways as instructions. Write them yourself, or let the
+LLM draft the catalogue:
+
+```bash
+curl -X POST localhost:8000/api/v1/domains/$DOMAIN/intents/generate \
+  -H 'content-type: application/json' \
+  -d '{"count": 5, "examples_per_intent": 8}'
+```
+
+Each proposed intent arrives complete: name, description, tool mapping, entity
+schema, and **training examples**. The examples matter, because an intent with
+none can never be retrieved, so generating intents without them would produce a
+catalogue that classifies nothing. With them, the domain is usable immediately.
+
+Auto mode is a drafting aid, not a separate kind of object. Generated intents
+land in the same collections as hand-written ones and are edited, deleted and
+re-tooled through the same endpoints and screens.
+
+- `"dry_run": true` returns the proposal without writing anything.
+- Names that already exist in the domain are **skipped, never overwritten**, so
+  running it twice extends the catalogue rather than duplicating it.
+- Model output is untrusted: names are coerced to the pattern the intent model
+  enforces, entity schemas are filtered to declared types, examples are
+  deduplicated against what the intent already has, and anything unusable is
+  reported in `skipped` rather than saved.
+
+The companion, for an intent you wrote by hand:
+
+```bash
+curl -X POST localhost:8000/api/v1/domains/$DOMAIN/intents/$INTENT/examples/generate \
+  -H 'content-type: application/json' -d '{"count": 8}'
+```
+
+The domain page carries both forms side by side, and the intent page has a
+generate button next to manual example entry. `LLM_PROVIDER=mock` drafts
+deterministic intents offline; it names records after the domain, so a real
+provider produces better domain vocabulary.
+
 ### Instructions are per domain
 
 The extraction prompt is assembled in layers, so each domain speaks its own
@@ -174,9 +214,14 @@ language without the code changing:
 | `user_instructions` | the domain | user turn, before the request |
 | conversation history | the session | user turn |
 
-A contract domain can say "a counterparty is the other party, never our own
-company"; an employee domain can say "'me' and 'my' are the person asking, not
-an employee name". Both edit from the domain page or the API.
+**System instructions open with the role the domain implies**, because how the
+assistant should act is the first thing the extractor needs to know. A
+contractual domain gets "You are acting as a contracts and legal analyst"; one
+about carts and checkout gets "You are acting as an e-commerce shopping
+assistant". The same sentence reads differently in each. After the role come the
+domain's vocabulary and what must never be inferred: "a counterparty is the
+other party, never our own company", or "'me' and 'my' are the person asking,
+not an employee name". Both blocks are edited from the domain page or the API.
 
 ### Running without a key
 
@@ -187,6 +232,55 @@ for strings. It is deliberately simple and deterministic. Its job is to make the
 *whole* flow runnable and testable end to end with no key: instructions,
 history, validation, carry-over and tool routing all execute for real. Health
 reports which provider is live.
+
+## MCP tools
+
+An intent can be wired to a Model Context Protocol tool. Register a server's
+catalogue by pasting its `tools/list` response, and every classification of a
+bound intent reports the exact call that would satisfy it:
+
+```bash
+curl -X POST localhost:8000/api/v1/mcp/tools/import \
+  -H 'content-type: application/json' \
+  -d '{"server": "contracts", "transport": "stdio",
+       "endpoint": "npx -y @acme/contracts-mcp",
+       "tools": {"tools": [{"name": "search_contracts",
+                            "inputSchema": {"type": "object",
+                                            "properties": {"counterparty": {"type": "string"}},
+                                            "required": ["counterparty"]}}]}}'
+```
+
+A classification then carries the resolved call:
+
+```json
+"mcp": {
+  "qualified_name": "mcp__contracts__search_contracts",
+  "server": "contracts", "tool": "search_contracts",
+  "transport": "stdio", "endpoint": "npx -y @acme/contracts-mcp",
+  "arguments": {"counterparty": "Microsoft"},
+  "missing_required": [], "unmapped": [], "ready": true
+}
+```
+
+The extracted entities are matched against the tool's own JSON Schema, not the
+intent's. Anything the tool does not declare is reported as `unmapped` rather
+than sent; a missing required argument leaves the call `ready: false`. Delete a
+bound tool and classifications say `unresolved` instead of silently losing the
+call.
+
+Auto mode binds as it generates: the registry is offered to the model, and a
+proposed tool is accepted only if it is actually registered. The import accepts
+the `tools/list` result, its bare `tools` array, or a JSON-RPC envelope, and
+re-importing updates in place.
+
+### Nothing is executed, and that is a seam not a wall
+
+This service resolves and reports the call. It does not dial the MCP server.
+Wiring up real invocation means implementing one protocol in
+`app/services/mcp_executor.py` and passing it to `create_app`; the resolved
+call already carries everything an invocation needs. The default implementation
+refuses every call, so a caller adding one cannot be surprised by this service
+having already run something.
 
 ### Tool routing stops before execution
 
@@ -368,6 +462,9 @@ embedding model (~67 MB) into `./data/models`.
 | `/ui/domains/{id}` | intents in a domain, tool mapping, index status, rebuild |
 | `/ui/domains/{id}/intents/{id}` | entity schema, training examples, add and delete |
 | `/ui/playground` | classify a query and see every retrieval stage |
+| `/ui/intents` | every intent across every domain, and what it is wired to |
+| `/ui/mcp` | the MCP tool registry; `/ui/mcp/{id}` for one tool |
+| `/ui/sessions` | recent conversations, auto-refreshing |
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
 | `/ui/operations` | index health, configuration in force, recent activity |
 | `/ui/api` | the generated API reference |
@@ -421,6 +518,11 @@ Base path `/api/v1`.
 | `POST` `GET` | `/domains/{domainId}/intents/{intentId}/examples` | add, list |
 | `POST` | `.../examples/bulk` | add many in one embedding pass |
 | `DELETE` | `.../examples/{exampleId}` | remove one |
+| `POST` `GET` | `/mcp/tools` | register or list MCP tools |
+| `GET` `PUT` `DELETE` | `/mcp/tools/{toolId}` | one MCP tool |
+| `POST` | `/mcp/tools/import` | load a server's `tools/list` catalogue |
+| `POST` | `/domains/{domainId}/intents/generate` | draft intents with examples (auto mode) |
+| `POST` | `/domains/{domainId}/intents/{intentId}/examples/generate` | draft more examples for one intent |
 | `GET` `DELETE` | `/sessions/{sessionId}` | inspect or forget a conversation |
 | `POST` | `/domains/{domainId}/reindex` | force a BM25 rebuild |
 | `GET` | `/domains/{domainId}/index/status` | index state, version, document counts |
@@ -470,6 +572,7 @@ ChromaDB is the system of record. Three collections:
 | `intents` | intent configuration, tool mapping, entity schema |
 | `intent_examples` | example text plus its 384-dimensional embedding |
 | `session_turns` | conversation turns: text, intent, entities, per session and domain |
+| `mcp_tools` | the MCP registry: server, tool, input schema, transport, endpoint |
 
 Uniqueness, cascading deletes and index invalidation are enforced in the service
 layer, since Chroma has no constraints. All access runs through one client under
@@ -505,7 +608,8 @@ Every value has a working default in `.env`.
 | `LLM_TIMEOUT_SECONDS` | `10` | extraction gives up after this |
 | `AUTH_ENABLED` / `API_KEYS` | `false` / *(empty)* | API key authentication |
 | `AB_TESTING_ENABLED` / `AB_VARIANTS` | `false` / `hybrid_rrf,dense_only` | strategy assignment |
-| `DEFAULT_STRATEGY` | `hybrid_rrf` | retrieval strategy when A/B is off |
+| `DEFAULT_STRATEGY` | `hybrid_rrf` | retrieval strategy; `auto` picks per query |
+| `AUTO_RESCUE_MARGIN` | `0.10` | how far above threshold an `auto` fallback must score |
 | `METRICS_ENABLED` | `true` | serve `/api/v1/metrics` |
 | `AUDIT_LOG_ENABLED` / `AUDIT_LOG_PATH` | `true` / `./data/audit/audit.jsonl` | audit trail |
 | `AUDIT_LOG_QUERY_TEXT` | `false` | record raw query text (personal data) |

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.qualified_name }} · Intent Classifier{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/ui/mcp">MCP tools</a> / {{ tool.server }}</p>
+<h1 class="mono">{{ tool.name }}</h1>
+<p class="muted">{{ tool.description or "No description." }}</p>
+<div class="chips">
+  <span class="badge mono">{{ tool.qualified_name }}</span>
+  <span class="badge">{{ tool.transport }}</span>
+  <span class="badge {{ 'ok' if tool.status == 'active' else 'warn' }}">{{ tool.status }}</span>
+  <span class="badge">{{ tool.bound_intents }} intent(s) bound</span>
+</div>
+
+<div class="grid">
+  <section class="card">
+    <h2>Arguments</h2>
+    <table>
+      <thead><tr><th>Name</th><th class="nowrap">Type</th><th class="nowrap">Required</th><th>Description</th></tr></thead>
+      <tbody>
+        {% for row in schema_rows %}
+        <tr>
+          <td class="mono">{{ row.name }}</td>
+          <td class="nowrap">{{ row.type }}</td>
+          <td class="nowrap">{% if row.required %}<span class="badge warn">required</span>{% else %}<span class="muted">optional</span>{% endif %}</td>
+          <td class="muted small">{{ row.description or "—" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="empty">This tool declares no input schema.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">
+      An intent's extracted entities are matched to these argument names. Anything the schema
+      does not declare is reported as unmapped rather than sent.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Where it runs</h2>
+    <dl class="kv">
+      <dt>Server</dt><dd>{{ tool.server }}</dd>
+      <dt>Transport</dt><dd>{{ tool.transport }}</dd>
+      <dt>Endpoint</dt><dd class="mono">{{ tool.endpoint or "not recorded" }}</dd>
+    </dl>
+    <p class="muted small">
+      Recorded so the caller knows where the tool lives. This service does not connect to it:
+      it resolves the call and hands it back for the caller to make.
+    </p>
+    <h2 style="margin-top:1.25rem">Raw input schema</h2>
+    <pre class="mono">{{ tool.input_schema | json_pretty }}</pre>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Bound intents</h2>
+  </div>
+  <table>
+    <thead><tr><th>Intent</th><th>Domain</th><th>Tool label</th></tr></thead>
+    <tbody>
+      {% for row in bound %}
+      <tr>
+        <td><a href="/ui/domains/{{ row.domain.id }}/intents/{{ row.intent.id }}">{{ row.intent.name }}</a></td>
+        <td><a href="/ui/domains/{{ row.domain.id }}">{{ row.domain.name }}</a></td>
+        <td class="mono">{{ row.intent.tool.name or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No intents are bound to this tool yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

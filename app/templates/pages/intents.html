@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Intents · Intent Classifier{% endblock %}
+{% block content %}
+<h1>All intents</h1>
+<p class="muted">Every intent across every domain, with what it is wired to.</p>
+
+<section class="card">
+  <div class="card-head">
+    <h2>{{ rows | length }} intent(s)</h2>
+    <div class="card-actions">
+      <form style="margin:0" onsubmit="return false">
+        <input id="intent-filter" placeholder="Filter by name, domain or tool" autocomplete="off"
+               oninput="const q=this.value.toLowerCase();document.querySelectorAll('#all-intents tbody tr').forEach(r=>{r.hidden = q && !r.textContent.toLowerCase().includes(q)})">
+      </form>
+    </div>
+  </div>
+  <table id="all-intents">
+    <thead>
+      <tr><th>Intent</th><th>Domain</th><th>Tool</th><th>MCP</th><th class="num">Examples</th><th class="nowrap">Status</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td><a href="/ui/domains/{{ row.domain.id }}/intents/{{ row.intent.id }}">{{ row.intent.name }}</a></td>
+        <td><a href="/ui/domains/{{ row.domain.id }}">{{ row.domain.name }}</a></td>
+        <td class="mono">{{ row.intent.tool.name or "—" }}</td>
+        <td>
+          {% if row.mcp %}
+            <a class="mono small" href="/ui/mcp/{{ row.mcp.id }}">{{ row.mcp.qualified_name }}</a>
+          {% elif row.intent.tool.mcp_tool_id %}
+            <span class="badge danger">unresolved</span>
+          {% else %}
+            <span class="muted">—</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ row.intent.example_count }}</td>
+        <td class="nowrap"><span class="badge {{ 'ok' if row.intent.status == 'active' else 'warn' }}">{{ row.intent.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">No intents yet. Create a domain, then add or generate intents.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

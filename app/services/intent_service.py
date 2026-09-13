@@ -66,7 +66,12 @@ class IntentService:
                 existing = self._intents.get_by_name(domain_id, new_name)
                 if existing is not None and existing.id != intent_id:
                     raise ConflictError(f"intent '{new_name}' already exists in this domain")
-            updated = intent.model_copy(update={**changes, "updated_at": now_ts()})
+            # Re-validate rather than model_copy: an update that carries a
+            # nested model (tool) arrives from model_dump as a plain dict, and
+            # model_copy would store it unvalidated, leaving intent.tool a dict.
+            updated = IntentConfig.model_validate(
+                {**intent.model_dump(), **changes, "updated_at": now_ts()}
+            )
             saved = self._intents.save(updated)
             if new_name and new_name != intent.name:
                 # Examples carry a denormalized intent name for debug output.

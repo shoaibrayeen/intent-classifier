@@ -119,9 +119,25 @@ class MockLLMClient:
             payload = json.loads(user)
         except json.JSONDecodeError:
             return {}
-        if payload.get("task") == "generate_domain_instructions":
+        task = payload.get("task")
+        if task == "generate_domain_instructions":
             return generate_instructions_by_rule(
                 str(payload.get("domain_name", "")), str(payload.get("description", ""))
+            )
+        if task == "generate_domain_intents":
+            return generate_intents_by_rule(
+                str(payload.get("domain_name", "")),
+                int(payload.get("intent_count", 5) or 5),
+                int(payload.get("examples_per_intent", 6) or 0),
+                [str(n) for n in payload.get("existing_intents", [])],
+                payload.get("available_mcp_tools") or [],
+            )
+        if task == "generate_intent_examples":
+            return generate_examples_by_rule(
+                str(payload.get("domain_name", "")),
+                str(payload.get("intent_name", "")),
+                int(payload.get("example_count", 6) or 6),
+                [str(t) for t in payload.get("existing_examples", [])],
             )
         text = str(payload.get("request", ""))
         schema = payload.get("entity_schema") or {}
@@ -218,6 +234,72 @@ def _proper_nouns(text: str, exclude: list[str]) -> list[str]:
     return found
 
 
+#: Keyword to (role, audience). The generated system instructions open with the
+#: role, because how the assistant should act is the first thing the extractor
+#: needs to know: "contractual" implies a legal analyst, "add to cart" implies a
+#: shopping assistant, and the two read the same sentence very differently.
+_ROLE_BY_KEYWORD: list[tuple[tuple[str, ...], str, str]] = [
+    (
+        ("contract", "agreement", "legal", "clause", "msa", "nda", "obligation", "counsel"),
+        "a contracts and legal analyst",
+        "legal, procurement and contract-management staff",
+    ),
+    (
+        (
+            "cart",
+            "checkout",
+            "order",
+            "product",
+            "catalog",
+            "catalogue",
+            "shop",
+            "store",
+            "ecommerce",
+            "e-commerce",
+            "sku",
+            "basket",
+        ),
+        "an e-commerce shopping assistant",
+        "shoppers and store operations staff",
+    ),
+    (
+        ("invoice", "payment", "billing", "expense", "finance", "accounting", "ledger"),
+        "a finance and accounts analyst",
+        "finance and accounts-payable staff",
+    ),
+    (
+        ("employee", "hr", "payroll", "leave", "attendance", "recruit", "candidate", "staff"),
+        "an HR and people-operations assistant",
+        "HR staff and employees asking about themselves or colleagues",
+    ),
+    (
+        ("ticket", "incident", "support", "helpdesk", "complaint", "sla"),
+        "a customer-support desk assistant",
+        "support agents and customers reporting problems",
+    ),
+    (
+        ("patient", "clinical", "medical", "diagnosis", "prescription", "health"),
+        "a clinical records assistant",
+        "clinical and administrative healthcare staff",
+    ),
+    (
+        ("shipment", "logistics", "delivery", "warehouse", "inventory", "stock", "freight"),
+        "a logistics and inventory assistant",
+        "warehouse, logistics and fulfilment staff",
+    ),
+]
+
+
+def infer_role(name: str, description: str) -> tuple[str, str]:
+    """Pick the role a domain implies, from its name and description."""
+    haystack = f"{name} {description}".casefold()
+    for keywords, role, audience in _ROLE_BY_KEYWORD:
+        if any(re.search(rf"\b{re.escape(word)}", haystack) for word in keywords):
+            return role, audience
+    subject = name.strip() or "this domain"
+    return f"a {subject} specialist", f"people working with {subject}"
+
+
 def generate_instructions_by_rule(name: str, description: str) -> dict[str, str]:
     """Deterministic instruction drafts, so the flow runs offline.
 
@@ -227,17 +309,240 @@ def generate_instructions_by_rule(name: str, description: str) -> dict[str, str]
     name = name.strip() or "this"
     about = description.strip().rstrip(".")
     focus = about if about else f"{name} operations"
+    role, audience = infer_role(name, about)
     return {
         "system_instructions": (
-            f"You extract entities for the {name} domain, which covers {focus}. "
-            f"Interpret every request in that context and use only the "
+            f"You are acting as {role}. This is the {name} domain, which covers "
+            f"{focus}. Interpret every request in that role and use only the "
             f"terminology the request itself contains. Never infer a value that "
             f"is not stated; when an entity is not mentioned, leave it out "
             f"rather than guessing."
         ),
         "user_instructions": (
-            f"Users are working with {focus}. They phrase requests informally, "
-            f"name things by their common business terms, and often refer back "
-            f"to items from earlier in the conversation."
+            f"Users are {audience}, working with {focus}. They phrase requests "
+            f"informally, name things by their common business terms, and often "
+            f"refer back to items from earlier in the conversation."
         ),
     }
+
+
+#: (operation suffix, tool verb, example templates). ``{d}`` is the domain name.
+#: Templated on purpose: the mock exists to exercise the pipeline end to end,
+#: and the phrasings have to be distinct enough that retrieval can actually
+#: tell the generated intents apart.
+_OPERATION_TEMPLATES: list[tuple[str, str, list[str]]] = [
+    (
+        "SEARCH",
+        "search",
+        [
+            "find all {d}s",
+            "show me {d}s for Microsoft",
+            "search {d}s",
+            "list every {d}",
+            "which {d}s do we have",
+            "look up {d}s for Oracle",
+            "get me the {d}s",
+            "show {d}s with Acme Corp",
+        ],
+    ),
+    (
+        "DETAILS",
+        "get",
+        [
+            "show me the details of {d} C-1042",
+            "open {d} C-1042",
+            "what are the details for this {d}",
+            "give me {d} C-1099",
+            "pull up {d} C-1042",
+            "I need the full {d} record",
+            "display {d} C-2210",
+            "details for {d} C-1042 please",
+        ],
+    ),
+    (
+        "SUMMARY",
+        "summarize",
+        [
+            "summarize {d} C-1042",
+            "give me a summary of this {d}",
+            "tl;dr of {d} C-1042",
+            "brief me on {d} C-1099",
+            "what does this {d} say",
+            "short overview of {d} C-1042",
+            "summarise the {d} with Acme Corp",
+            "key points of {d} C-2210",
+        ],
+    ),
+    (
+        "STATUS",
+        "get",
+        [
+            "what is the status of {d} C-1042",
+            "is {d} C-1042 still active",
+            "check the status of this {d}",
+            "{d} C-1099 status",
+            "show me the state of {d} C-1042",
+            "has {d} C-2210 been approved",
+            "current status for {d} C-1042",
+            "tell me if {d} C-1099 is active",
+        ],
+    ),
+    (
+        "COMPARE",
+        "compare",
+        [
+            "compare {d} C-1042 with C-1099",
+            "what changed between these two {d}s",
+            "diff {d} C-1042 and C-1099",
+            "put {d} C-1042 side by side with C-2210",
+            "show differences between {d} C-1042 and C-1099",
+            "how do these {d}s differ",
+            "compare the two {d}s",
+            "contrast {d} C-1099 against C-2210",
+        ],
+    ),
+    (
+        "EXPIRY",
+        "get_expiring",
+        [
+            "which {d}s expire this year",
+            "show {d}s expiring next month",
+            "when does {d} C-1042 expire",
+            "{d}s coming up for renewal",
+            "list {d}s ending soon",
+            "what {d}s are due to end in 2026",
+            "find {d}s past their end date",
+            "upcoming {d} expirations",
+        ],
+    ),
+    (
+        "CREATE",
+        "create",
+        [
+            "create a new {d}",
+            "start a {d} with Acme Corp",
+            "draft a new {d}",
+            "set up a {d} for Oracle",
+            "I want to raise a {d}",
+            "open a new {d} record",
+            "add a {d} for Microsoft",
+            "begin a new {d}",
+        ],
+    ),
+    (
+        "DELETE",
+        "delete",
+        [
+            "delete {d} C-1042",
+            "remove this {d}",
+            "cancel {d} C-1099",
+            "get rid of {d} C-2210",
+            "terminate {d} C-1042",
+            "close out this {d}",
+            "void {d} C-1099",
+            "archive {d} C-1042",
+        ],
+    ),
+]
+
+_SCHEMA_BY_OPERATION: dict[str, dict[str, dict]] = {
+    "SEARCH": {
+        "counterparty": {"type": "string"},
+        "status": {"type": "enum", "values": ["ACTIVE", "EXPIRED", "DRAFT"]},
+    },
+    "DETAILS": {"record_id": {"type": "string", "required": True}},
+    "SUMMARY": {"record_id": {"type": "string", "required": True}},
+    "STATUS": {"record_id": {"type": "string", "required": True}},
+    "COMPARE": {"record_id": {"type": "string", "required": True}},
+    "EXPIRY": {"counterparty": {"type": "string"}, "expiration_year": {"type": "integer"}},
+    "CREATE": {"counterparty": {"type": "string"}},
+    "DELETE": {"record_id": {"type": "string", "required": True}},
+}
+
+
+def _singular(name: str) -> str:
+    name = name.strip().casefold() or "record"
+    return name[:-1] if name.endswith("s") and not name.endswith("ss") else name
+
+
+def _pick_mcp_tool(offered: list[dict], verb: str, noun: str, suffix: str) -> str | None:
+    """Choose an offered tool whose name looks like this operation.
+
+    Matched on the operation word rather than the whole tool name, so a
+    registry using its own naming still binds: SEARCH finds "search_contracts",
+    "find_contracts" or "contracts_query".
+    """
+    if not offered:
+        return None
+    synonyms = {
+        "SEARCH": ("search", "find", "query", "list"),
+        "DETAILS": ("get", "detail", "fetch", "read", "show"),
+        "SUMMARY": ("summar", "digest", "brief"),
+        "STATUS": ("status", "state", "check"),
+        "COMPARE": ("compare", "diff"),
+        "EXPIRY": ("expir", "renew", "due"),
+        "CREATE": ("create", "add", "new", "open", "draft"),
+        "DELETE": ("delete", "remove", "cancel", "close", "archive"),
+    }.get(suffix, (verb,))
+    for tool in offered:
+        name = str(tool.get("name", "")).casefold()
+        if any(word in name for word in synonyms):
+            return str(tool.get("qualified_name") or "") or None
+    return None
+
+
+def generate_intents_by_rule(
+    domain_name: str,
+    count: int,
+    examples_per_intent: int,
+    existing: list[str],
+    offered_mcp_tools: list[dict] | None = None,
+) -> dict:
+    """Deterministic intent drafts covering the common operations of a domain."""
+    noun = _singular(domain_name)
+    prefix = re.sub(r"[^A-Z0-9]+", "_", domain_name.strip().upper()).strip("_") or "DOMAIN"
+    taken = {name.casefold() for name in existing}
+
+    intents = []
+    for suffix, verb, templates in _OPERATION_TEMPLATES:
+        if len(intents) >= count:
+            break
+        name = f"{prefix}_{suffix}"
+        if name.casefold() in taken:
+            continue
+        intents.append(
+            {
+                "name": name,
+                "description": f"{suffix.casefold().capitalize()} operation for {noun} records.",
+                "tool": f"{verb}_{noun}s"
+                if verb in {"search", "get_expiring"}
+                else f"{verb}_{noun}",
+                "entity_schema": _SCHEMA_BY_OPERATION.get(suffix, {}),
+                "extraction_hints": "",
+                "mcp_tool": _pick_mcp_tool(offered_mcp_tools or [], verb, noun, suffix) or "",
+                "examples": [t.format(d=noun) for t in templates[:examples_per_intent]],
+            }
+        )
+    return {"intents": intents}
+
+
+def generate_examples_by_rule(
+    domain_name: str, intent_name: str, count: int, existing: list[str]
+) -> dict:
+    """More phrasings for one intent, matched to its operation suffix."""
+    noun = _singular(domain_name)
+    suffix = intent_name.rsplit("_", 1)[-1].upper() if "_" in intent_name else intent_name.upper()
+    templates = next(
+        (t for s, _, t in _OPERATION_TEMPLATES if s == suffix), _OPERATION_TEMPLATES[0][2]
+    )
+    seen = {" ".join(e.split()).casefold() for e in existing}
+    produced = [t.format(d=noun) for t in templates]
+    fresh = [t for t in produced if t.casefold() not in seen]
+    # Fall back to qualified variants when the obvious phrasings are used up.
+    if len(fresh) < count:
+        fresh += [
+            f"{t.format(d=noun)} please"
+            for t in templates
+            if f"{t.format(d=noun)} please".casefold() not in seen
+        ]
+    return {"examples": fresh[:count]}

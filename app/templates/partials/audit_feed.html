@@ -1,0 +1,21 @@
+{% if audit_entries %}
+<table>
+  <thead><tr><th class="nowrap">When</th><th>Action</th><th>Resource</th><th class="nowrap">Outcome</th><th>Detail</th></tr></thead>
+  <tbody>
+    {% for entry in audit_entries %}
+    <tr>
+      <td class="mono small nowrap">{{ entry.ts[11:19] if entry.ts else "—" }}</td>
+      <td class="mono small nowrap">{{ entry.action }}</td>
+      <td class="muted small">{{ entry.resource or "—" }}</td>
+      <td class="nowrap">{% if entry.outcome in ("ok", "matched") %}<span class="badge ok">{{ entry.outcome }}</span>{% else %}<span class="badge warn">{{ entry.outcome }}</span>{% endif %}</td>
+      <td class="muted small">
+        {%- if entry.intent %}{{ entry.intent }} @ {{ entry.confidence }}{% if entry.strategy %} · {{ entry.strategy }}{% endif %}{% if entry.latency_ms %} · {{ entry.latency_ms }}ms{% endif %}
+        {%- elif entry.detail %}{{ entry.detail }}{% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Nothing recorded yet.</p>
+{% endif %}

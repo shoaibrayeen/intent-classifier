@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sessions · Intent Classifier{% endblock %}
+{% block content %}
+<h1>Conversations</h1>
+<p class="muted">
+  Turns recorded against a session id. A follow-up that cannot stand alone is read against the
+  previous question, and entities named earlier carry into a later intent that accepts them.
+</p>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Recent sessions</h2>
+    <div class="card-actions">
+      <span class="live" hx-get="/ui/sessions/list" hx-trigger="every 15s" hx-target="#session-list"
+            hx-swap="innerHTML">auto-refreshing</span>
+    </div>
+  </div>
+  <div id="session-list">{% include "partials/session_list.html" %}</div>
+</section>
+{% endblock %}

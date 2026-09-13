@@ -85,8 +85,16 @@ class Settings(BaseSettings):
 
     # --- A/B testing of retrieval strategies ---------------------------
     ab_testing_enabled: bool = False
+    #: "hybrid_rrf" is the measured best single strategy and stays the default.
+    #: "auto" answers with hybrid and only falls back to the alternates when
+    #: hybrid cannot place a query, reporting whichever one resolved it.
     default_strategy: str = "hybrid_rrf"
     ab_variants: str = "hybrid_rrf,dense_only"
+    #: How far above the normal threshold a fallback must score before "auto"
+    #: accepts it. A rescue has to be clearly good, not merely borderline:
+    #: without a margin, falling back trades UNKNOWN detection for accuracy,
+    #: which for a tool-calling system means invoking the wrong tool.
+    auto_rescue_margin: float = Field(default=0.10, ge=0.0, le=0.5)
 
     # --- security -------------------------------------------------------
     auth_enabled: bool = False

@@ -16,6 +16,18 @@ from app.config import Settings
 HYBRID_RRF = "hybrid_rrf"
 DENSE_ONLY = "dense_only"
 BM25_ONLY = "bm25_only"
+AUTO = "auto"
+
+#: Tried in order by AUTO, after hybrid has already failed to resolve.
+#: Hybrid is measurably the best single strategy, so it always answers first and
+#: the rest exist only to rescue a query it could not place.
+#:
+#: Every fallback must use dense retrieval. The minimum-similarity floor is what
+#: rejects an off-domain query, and it can only be applied when there is a
+#: similarity to judge: measured here, a lexical-only pass matched "what is the
+#: weather today" to CONTRACT_EXPIRY at 0.86 confidence on one shared word.
+#: A rescue that accepts anything is not a rescue.
+AUTO_FALLBACKS: tuple[str, ...] = ("hybrid_wide", DENSE_ONLY)
 
 
 @dataclass(frozen=True)
@@ -74,6 +86,16 @@ BUILTIN_STRATEGIES: dict[str, RetrievalStrategy] = {
     ),
 }
 
+#: AUTO is a selection policy, not a retrieval configuration, so it is resolved
+#: by the classification service rather than being a strategy in its own right.
+AUTO_STRATEGY = RetrievalStrategy(
+    name=AUTO,
+    description=(
+        "Answer with hybrid fusion; if it cannot place the query, retry the "
+        "alternates and report whichever resolved it."
+    ),
+)
+
 
 class StrategySelector:
     """Resolves which strategy a request runs, and why."""
@@ -95,8 +117,20 @@ class StrategySelector:
         return configured or [HYBRID_RRF]
 
     def get(self, name: str) -> RetrievalStrategy:
+        if name == AUTO:
+            return AUTO_STRATEGY
         strategy = BUILTIN_STRATEGIES.get(name, BUILTIN_STRATEGIES[HYBRID_RRF])
         return strategy.for_settings(self._settings)
+
+    def auto_sequence(self) -> list[RetrievalStrategy]:
+        """Hybrid first, then the rescues, in the order AUTO should try them.
+
+        Candidates without dense retrieval are dropped rather than trusted: see
+        AUTO_FALLBACKS. Filtering here as well as in the list means a future
+        edit to that tuple cannot quietly reopen the hole.
+        """
+        fallbacks = [self.get(name) for name in AUTO_FALLBACKS]
+        return [self.get(HYBRID_RRF), *(s for s in fallbacks if s.use_dense)]
 
     def select(self, request_id: str, override: str | None = None) -> RetrievalStrategy:
         """An explicit override always wins, so a caller can reproduce a result."""

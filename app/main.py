@@ -25,6 +25,7 @@ from app.observability.context import (
 )
 from app.services.container import build_container
 from app.services.llm.client import LLMClient
+from app.services.mcp_executor import McpExecutor
 from app.ui.routes import router as ui_router
 from app.ui.templating import templates
 
@@ -172,7 +173,11 @@ def _route_template(request: Request) -> str:
     return path
 
 
-def create_app(settings: Settings | None = None, llm_client: LLMClient | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    llm_client: LLMClient | None = None,
+    mcp_executor: McpExecutor | None = None,
+) -> FastAPI:
     settings = settings or get_settings()
     _configure_logging(settings)
 
@@ -180,7 +185,9 @@ def create_app(settings: Settings | None = None, llm_client: LLMClient | None = 
     async def lifespan(app: FastAPI):
         app.state.settings = settings
         tracing.setup(settings)
-        app.state.container = build_container(settings, llm_client=llm_client)
+        app.state.container = build_container(
+            settings, llm_client=llm_client, mcp_executor=mcp_executor
+        )
         if settings.auth_enabled:
             logger.info(
                 "authentication is on with %d key(s)", app.state.container.authenticator.key_count

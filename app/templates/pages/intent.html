@@ -1,5 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ intent.name }} · Intent Classifier{% endblock %}
+{% block title %}{{ intent.name }} · Intent Classifier<section class="card">
+  <div class="card-head">
+    <h2>MCP tool</h2>
+    <div class="card-actions"><a class="button-link" href="/ui/mcp">Registry</a></div>
+  </div>
+  <div id="mcp-binding">{% include "partials/mcp_binding.html" %}</div>
+</section>
+{% endblock %}
 {% block content %}
 <nav class="crumbs">
   <a href="/">Domains</a> / <a href="/ui/domains/{{ domain.id }}">{{ domain.name }}</a> / <span>{{ intent.name }}</span>
@@ -37,6 +44,22 @@
         hx-target="#example-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
     <label>Add example<input name="text" required placeholder="Find all contracts with Microsoft" maxlength="2000"></label>
     <button type="submit">Add example</button>
+  </form>
+  <form hx-post="/ui/domains/{{ domain.id }}/intents/{{ intent.id }}/examples/generate"
+        hx-target="#example-list" hx-swap="innerHTML" hx-indicator="#examples-busy">
+    <div class="row">
+      <label>Generate more examples<input name="count" type="number" value="6" min="1" max="25"></label>
+    </div>
+    <button type="submit" {% if not generator_available %}disabled{% endif %}>
+      Generate with LLM ({{ provider }}) <span id="examples-busy" class="htmx-indicator">…</span>
+    </button>
+    <p class="muted small">
+      {% if generator_available %}
+      Examples are what make this intent findable. Anything duplicating an existing example is dropped.
+      {% else %}
+      Needs a provider: set OPENAI_API_KEY, or LLM_PROVIDER=mock to draft offline.
+      {% endif %}
+    </p>
   </form>
   <button hx-post="/ui/domains/{{ domain.id }}/reindex" hx-target="#index-status" hx-swap="innerHTML">Rebuild index</button>
 </section>
