@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=10.0, gt=0)
     llm_max_retries: int = Field(default=1, ge=0, le=5)
 
+    #: Load the demo catalogue at startup when the store is empty. Seeding
+    #: in-process matters for the container: embedded Chroma is single-writer,
+    #: so seeding from a second process while the server holds the store leaves
+    #: the server unable to read the new vectors until it restarts.
+    seed_on_startup: bool = False
+
     # --- multi-turn sessions --------------------------------------------
     sessions_enabled: bool = True
     #: Earlier turns shown to the extractor as conversation history.

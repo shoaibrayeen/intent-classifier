@@ -314,17 +314,33 @@ penalised for evidence they were never configured to collect.
 ## Quickstart (Docker)
 
 ```bash
-cp .env.example .env     # then set OPENAI_API_KEY if you want entity extraction
 docker compose up --build
 ```
 
-Seed the demo catalogue (two domains, seven intents, 46 examples):
+Then open <http://localhost:8000/>. That is the whole quickstart: compose sets
+`SEED_ON_STARTUP=true`, so the demo catalogue (two domains, seven intents, 46
+examples) loads on the first run, and only while the store is empty. Set it to
+`false` in `docker-compose.yml` for a real deployment.
+
+`.env` is optional and gitignored. Without one the defaults in `app/config.py`
+apply, which run everything except entity extraction. For that:
 
 ```bash
+cp .env.example .env     # then set OPENAI_API_KEY
+```
+
+**Do not run the seed script against a store a running server already holds:**
+
+```bash
+# wrong: this writes from a second process
 docker compose exec intent-classifier python -m scripts.seed
 ```
 
-Then open <http://localhost:8000/>.
+Embedded Chroma is single-writer. The write succeeds, but the running server
+keeps its own view of the store and fails to read the new vectors with
+`Error creating hnsw segment reader: Nothing found on disk` until it is
+restarted. Use `SEED_ON_STARTUP`, the REST API, or the UI to add intents to a
+live service. If you do seed this way, run `docker compose restart` afterwards.
 
 The embedding model is baked into the image, so the first classification does
 not wait on a download and the container runs without network access. The

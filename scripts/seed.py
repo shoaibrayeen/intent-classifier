@@ -178,6 +178,14 @@ CATALOGUE: list[dict[str, Any]] = [
 ]
 
 
+SINGLE_WRITER_WARNING = (
+    "note: this writes directly to the Chroma store. If a server is already "
+    "running against the same path, restart it afterwards -- embedded Chroma "
+    "is single-writer and the running process will not see these vectors. "
+    "Under Docker, prefer SEED_ON_STARTUP=true."
+)
+
+
 def seed(container: Container) -> dict[str, int]:
     stats = {"domains": 0, "intents": 0, "examples": 0}
     for domain_spec in CATALOGUE:
@@ -274,6 +282,8 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = get_settings()
     print(f"chroma: {settings.chroma_mode} at {settings.chroma_path}")
+    if settings.chroma_mode == "persistent":
+        print(SINGLE_WRITER_WARNING)
     container = build_container(settings)
 
     if args.export:

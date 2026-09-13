@@ -3,7 +3,13 @@ services:
     build: .
     image: intent-classifier:latest
     container_name: intent-classifier
-    env_file: .env
+    # Optional: .env is gitignored, so a fresh clone has none. When it is
+    # absent the application's own defaults in app/config.py apply, which are
+    # enough to run everything except entity extraction. Copy .env.example to
+    # .env and set OPENAI_API_KEY to enable that.
+    env_file:
+      - path: .env
+        required: false
     environment:
       # Container paths override the host-relative defaults in .env.
       CHROMA_PATH: /app/data/chroma
@@ -11,6 +17,10 @@ services:
       MODEL_CACHE_DIR: /opt/models
       INDEX_DIR: /app/data/indexes
       AUDIT_LOG_PATH: /app/data/audit/audit.jsonl
+      # Loads the demo catalogue on first run, and only while the store is
+      # empty. Seeding happens in the server's own process because embedded
+      # Chroma is single-writer. Set to "false" for a real deployment.
+      SEED_ON_STARTUP: "true"
     ports:
       - "8000:8000"
     volumes:

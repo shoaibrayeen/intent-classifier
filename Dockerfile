@@ -13,21 +13,28 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-dev
 
+# Bake the embedding model into the image (~67 MB) so the first classification
+# is not a cold download and the container can run without network access.
+# It lives outside /app/data on purpose: that path is a bind mount at runtime
+# and would shadow anything baked underneath it.
+#
+# This sits above the source copy so that editing code or docs does not force
+# the download to run again on every rebuild.
+ENV MODEL_CACHE_DIR=/opt/models
+RUN python -c "\
+from fastembed import TextEmbedding; \
+TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='/opt/models')"
+
+# README.md is required here, not optional: pyproject declares it as the
+# project readme, and the build backend validates that the file exists when
+# the project itself is installed by the sync below.
+COPY README.md ./README.md
 COPY app ./app
 COPY scripts ./scripts
 # Generated API reference, served at /ui/api.
 COPY api-documentation.html ./api-documentation.html
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
-
-# Bake the embedding model into the image (~67 MB) so the first classification
-# is not a cold download and the container can run without network access.
-# It lives outside /app/data on purpose: that path is a bind mount at runtime
-# and would shadow anything baked underneath it.
-ENV MODEL_CACHE_DIR=/opt/models
-RUN python -c "\
-from fastembed import TextEmbedding; \
-TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='/opt/models')"
 
 EXPOSE 8000
 

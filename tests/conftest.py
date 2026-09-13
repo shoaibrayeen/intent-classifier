@@ -15,7 +15,25 @@ os.environ["AUDIT_LOG_ENABLED"] = "false"
 os.environ.setdefault("MODEL_CACHE_DIR", "./data/models")
 
 from app.config import Settings  # noqa: E402
+from app.db.chroma import ChromaStore  # noqa: E402
 from app.main import create_app  # noqa: E402
+
+
+_reset_store: ChromaStore | None = None
+
+
+def reset_shared_store() -> None:
+    """Clear the ephemeral store every app in this process shares.
+
+    One store is reused rather than constructing a client per app: each extra
+    client adds a reference to Chroma's shared native system, and more live
+    references make the interpreter-shutdown race in its Rust bindings more
+    likely to fire.
+    """
+    global _reset_store
+    if _reset_store is None:
+        _reset_store = ChromaStore(make_settings())
+    _reset_store.reset_all()
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -27,8 +45,16 @@ def pytest_sessionfinish(session, exitstatus):
     crash happened after all tests had passed, but an aborting process still
     fails CI.
     """
+    global _reset_store
     try:
+        import gc
+
         from chromadb.api.shared_system_client import SharedSystemClient
+
+        # Drop our own references first, so stopping the systems below is not
+        # racing against objects that still hold handles into the bindings.
+        _reset_store = None
+        gc.collect()
 
         for system in list(SharedSystemClient._identifier_to_system.values()):
             try:
@@ -36,6 +62,7 @@ def pytest_sessionfinish(session, exitstatus):
             except Exception:
                 pass
         SharedSystemClient.clear_system_cache()
+        gc.collect()
     except Exception:
         pass
 
@@ -65,11 +92,15 @@ def app_factory():
     created = []
 
     def build(settings_overrides: dict | None = None, llm_client=None):
-        app = create_app(make_settings(**(settings_overrides or {})), llm_client=llm_client)
+        settings = make_settings(**(settings_overrides or {}))
+        # Ephemeral Chroma clients share one underlying system per settings
+        # identifier, so records leak between apps built in the same process.
+        # Clear it BEFORE the new app's lifespan runs: clearing afterwards
+        # would also wipe anything startup did, such as seeding.
+        reset_shared_store()
+        app = create_app(settings, llm_client=llm_client)
         client = TestClient(app)
         client.__enter__()
-        app.state.container.store.reset_all()
-        app.state.container.index_manager.clear()
         created.append(client)
         return app, client
 

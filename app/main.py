@@ -127,6 +127,34 @@ def _configure_logging(settings: Settings) -> None:
     )
 
 
+def _seed_if_empty(container) -> None:
+    """Load the demo catalogue, but only into an empty store.
+
+    Runs in the server's own process on purpose. Embedded Chroma is
+    single-writer: seeding from a second process against a store the server
+    already holds open leaves the server unable to read the new vectors until
+    it is restarted.
+    """
+    # Everything here is best-effort, including the emptiness check: loading a
+    # demo catalogue is a convenience and must never stop the service starting.
+    try:
+        if container.domains.list():
+            logger.info("SEED_ON_STARTUP is on but the catalogue is not empty; leaving it alone")
+            return
+
+        from scripts.seed import seed
+
+        stats = seed(container)
+        logger.info(
+            "seeded %d domain(s), %d intent(s), %d example(s)",
+            stats["domains"],
+            stats["intents"],
+            stats["examples"],
+        )
+    except Exception:
+        logger.exception("startup seeding failed; continuing with an empty catalogue")
+
+
 def _route_template(request: Request) -> str:
     """Label metrics by route template, never by the concrete path.
 
@@ -166,6 +194,8 @@ def create_app(settings: Settings | None = None, llm_client: LLMClient | None = 
                 "classifications will return no entities"
             )
         container = app.state.container
+        if settings.seed_on_startup:
+            _seed_if_empty(container)
         warmed = container.index_manager.warm([d.id for d in container.domains.list()])
         logger.info("warmed %d domain index(es)", warmed)
         logger.info("%s %s ready", settings.app_name, settings.app_version)
