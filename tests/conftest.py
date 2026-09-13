@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,7 +18,6 @@ os.environ.setdefault("MODEL_CACHE_DIR", "./data/models")
 from app.config import Settings  # noqa: E402
 from app.db.chroma import ChromaStore  # noqa: E402
 from app.main import create_app  # noqa: E402
-
 
 _reset_store: ChromaStore | None = None
 
@@ -36,14 +36,21 @@ def reset_shared_store() -> None:
     _reset_store.reset_all()
 
 
+@pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
-    """Stop Chroma's shared native systems before the interpreter tears down.
+    """Shut Chroma down, then leave without running interpreter finalization.
 
-    chromadb 1.5.x on macOS ARM64 can abort with 'recursive_mutex lock failed'
-    when its Rust runtime is destroyed by interpreter exit in an arbitrary
-    order. Stopping the cached systems explicitly makes shutdown ordered. The
-    crash happened after all tests had passed, but an aborting process still
-    fails CI.
+    chromadb 1.5.x on macOS ARM64 intermittently aborts with 'recursive_mutex
+    lock failed' while its Rust runtime is destroyed during interpreter exit.
+    Every test has already run and reported by this point, but an aborting
+    process still returns 134 and fails CI. Stopping the cached systems first
+    helps and is not sufficient on its own: measured over repeated runs it
+    still aborted roughly one time in eight.
+
+    So after stopping them we flush and call os._exit, which skips the
+    finalization that triggers the crash. The trade-off is that atexit handlers
+    do not run, so this is skipped when coverage is active (it writes its data
+    at exit) and can be disabled with INTENT_CLASSIFIER_SOFT_EXIT=1.
     """
     global _reset_store
     try:
@@ -65,6 +72,12 @@ def pytest_sessionfinish(session, exitstatus):
         gc.collect()
     except Exception:
         pass
+
+    if os.environ.get("INTENT_CLASSIFIER_SOFT_EXIT") or "coverage" in sys.modules:
+        return
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(int(exitstatus))
 
 
 def make_settings(**overrides) -> Settings:
