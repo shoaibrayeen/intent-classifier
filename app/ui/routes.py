@@ -256,8 +256,14 @@ def operations_audit(request: Request, container: Container = Depends(get_contai
 
 
 @router.get("/ui/evaluation", response_class=HTMLResponse)
-def evaluation_page(request: Request):
-    return templates.TemplateResponse(request=request, name="pages/evaluation.html", context={})
+def evaluation_page(request: Request, container: Container = Depends(get_container)):
+    from app.services.evaluation import dataset_path
+
+    return templates.TemplateResponse(
+        request=request,
+        name="pages/evaluation.html",
+        context={"dataset": dataset_path(container.settings)},
+    )
 
 
 @router.post("/ui/evaluation/run", response_class=HTMLResponse)

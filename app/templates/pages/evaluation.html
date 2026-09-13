@@ -23,7 +23,12 @@
     </label>
     <button type="submit">Run evaluation <span id="eval-busy" class="htmx-indicator">…</span></button>
   </form>
-  <p class="muted small">Comparing two variants here is the honest way to judge a retrieval change.</p>
+  <p class="muted small">
+    Comparing two variants here is the honest way to judge a retrieval change.
+    Cases come from <span class="mono">{{ dataset }}</span>; point
+    <span class="mono">EVALUATION_DATASET_PATH</span> at your own to evaluate against real
+    traffic. <a href="/ui/properties">All settings</a>
+  </p>
 </section>
 
 <div id="evaluation-result"></div>

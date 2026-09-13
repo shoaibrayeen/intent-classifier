@@ -1,3 +1,19 @@
+{% if report.problem %}
+<section class="card">
+  <div class="card-head">
+    <h2>Nothing was evaluated</h2>
+    <span class="badge warn">{{ report.strategy }}</span>
+  </div>
+  <p>{{ report.problem }}</p>
+  {% if report.dataset %}
+  <p class="muted small">Looked in <span class="mono">{{ report.dataset }}</span>.</p>
+  {% endif %}
+  <p class="muted small">
+    A run that matched nothing and a run that could not happen look identical in a table of
+    zeroes, so this says which it was.
+  </p>
+</section>
+{% else %}
 <section class="card">
   <h2>Results <span class="badge">{{ report.strategy }}</span></h2>
   {% if report.skipped %}
@@ -26,8 +42,9 @@
     </div>
   </div>
   <p class="muted small">
-    {{ report.cases | length }} cases: {{ report.in_domain | length }} in-domain,
-    {{ report.out_domain | length }} out-of-domain. Thresholds in force:
+    {{ report.cases | length }} of {{ report.total_cases }} cases ran:
+    {{ report.in_domain | length }} in-domain, {{ report.out_domain | length }} out-of-domain.
+    Thresholds in force:
     confidence {{ settings.confidence_threshold }}, similarity {{ settings.min_dense_similarity }}.
   </p>
 </section>
@@ -74,3 +91,5 @@
     {% endif %}
   </section>
 </div>
+
+{% endif %}

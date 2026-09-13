@@ -19,7 +19,10 @@ if TYPE_CHECKING:  # pragma: no cover - import cycle only matters for typing
 
 logger = logging.getLogger(__name__)
 
-DATASET_PATH = Path(__file__).resolve().parents[2] / "tests" / "evaluation" / "dataset.json"
+#: Ships inside the package. It lived under tests/ once, which meant the
+#: evaluation page ran zero cases in Docker: tests/ is not copied into the
+#: image, so the feature silently had nothing to evaluate.
+DATASET_PATH = Path(__file__).resolve().parents[1] / "evaluation" / "dataset.json"
 
 
 @dataclass
@@ -47,6 +50,12 @@ class EvaluationReport:
     strategy: str
     cases: list[CaseResult] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
+    #: Set when the run could not happen at all, rather than happening and
+    #: matching nothing. An empty report that looks like a pass is worse than
+    #: no report.
+    problem: str | None = None
+    dataset: str = ""
+    total_cases: int = 0
 
     @property
     def in_domain(self) -> list[CaseResult]:
@@ -105,14 +114,27 @@ class EvaluationReport:
             "unknown_detection": self.unknown_detection,
             "false_unknown": self.false_unknown,
             "skipped": self.skipped,
+            "problem": self.problem,
+            "dataset": self.dataset,
         }
+
+
+def dataset_path(settings=None) -> Path:
+    """Where the evaluation cases come from: the setting, else the packaged set."""
+    configured = getattr(settings, "evaluation_dataset_path", "") if settings else ""
+    return Path(configured) if configured else DATASET_PATH
 
 
 def load_cases(path: Path | None = None) -> list[dict[str, Any]]:
     target = path or DATASET_PATH
     if not target.exists():
+        logger.warning("no evaluation dataset at %s", target)
         return []
-    return json.loads(target.read_text("utf-8")).get("cases", [])
+    try:
+        return json.loads(target.read_text("utf-8")).get("cases", [])
+    except (OSError, json.JSONDecodeError):
+        logger.exception("could not read the evaluation dataset at %s", target)
+        return []
 
 
 async def run_evaluation(
@@ -120,10 +142,22 @@ async def run_evaluation(
 ) -> EvaluationReport:
     """Classify every case against the live catalogue."""
     strategy_name = variant or container.settings.default_strategy
-    report = EvaluationReport(strategy=strategy_name)
+    target = path or dataset_path(container.settings)
+    cases = load_cases(target)
+    report = EvaluationReport(strategy=strategy_name, dataset=str(target), total_cases=len(cases))
+    if not cases:
+        report.problem = (
+            f"No evaluation cases found at {target}. Point "
+            "EVALUATION_DATASET_PATH at a JSON file with a 'cases' array."
+        )
+        return report
 
     known = {domain.name.casefold() for domain in container.domains.list()}
-    for case in load_cases(path):
+    if not known:
+        report.problem = "No domains are configured, so there is nothing to evaluate against."
+        return report
+
+    for case in cases:
         if case["domain"].casefold() not in known:
             note = f"domain '{case['domain']}' is not configured"
             if note not in report.skipped:
@@ -164,5 +198,11 @@ async def run_evaluation(
                 best_similarity=breakdown.best_similarity if breakdown else 0.0,
                 ranked=[item.intent for item in result.top_intents],
             )
+        )
+
+    if not report.cases:
+        report.problem = (
+            "Every case was skipped: none of the dataset's domains are configured here. "
+            f"It expects {', '.join(sorted({c['domain'] for c in cases}))}."
         )
     return report

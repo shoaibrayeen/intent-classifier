@@ -59,7 +59,7 @@ footer{margin-top:3rem;border-top:1px solid var(--line);padding-top:1.25rem;
   <h1>Configuration</h1>
   <p class="lede">
     Every setting the service reads, with the value it uses when you say nothing.
-    All 48 have working defaults: the service starts, classifies and serves its UI with no
+    All 49 have working defaults: the service starts, classifies and serves its UI with no
     <span class="mono">.env</span> at all.
   </p>
   <p class="toc"><a href="#core">Core</a> · <a href="#entity-extraction-and-generation">Entity extraction and generation</a> · <a href="#security">Security</a> · <a href="#storage">Storage</a> · <a href="#embedding-model">Embedding model</a> · <a href="#retrieval">Retrieval</a> · <a href="#confidence-and-unknown">Confidence and UNKNOWN</a> · <a href="#retrieval-strategy">Retrieval strategy</a> · <a href="#multi-turn-sessions">Multi-turn sessions</a> · <a href="#observability">Observability</a></p>
@@ -95,6 +95,12 @@ LLM_PROVIDER=mock</pre>
         <td class="mono default">0.1.0</td>
         <td class="type">str</td>
         <td>Reported by /api/v1/health.</td>
+      </tr>
+      <tr>
+        <td class="mono">EVALUATION_DATASET_PATH</td>
+        <td class="mono default">(empty)</td>
+        <td class="type">str</td>
+        <td>A JSON file with a &#x27;cases&#x27; array to evaluate against. Empty uses the set that ships with the application.</td>
       </tr>
       <tr>
         <td class="mono">LOG_LEVEL</td>

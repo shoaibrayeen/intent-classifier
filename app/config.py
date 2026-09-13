@@ -172,6 +172,12 @@ class Settings(BaseSettings):
         10.0, "How long a provider call may take before giving up.", group=LLM, gt=0
     )
     llm_max_retries: int = setting(1, "Retries on a failed provider call.", group=LLM, ge=0, le=5)
+    evaluation_dataset_path: str = setting(
+        "",
+        "A JSON file with a 'cases' array to evaluate against. Empty uses the set that "
+        "ships with the application.",
+        group=CORE,
+    )
     seed_on_startup: bool = setting(
         False,
         "Load the demo catalogue when the store is empty. Seeding runs in the server's own "

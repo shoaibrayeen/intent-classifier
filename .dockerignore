@@ -1,6 +1,9 @@
 .git
 .venv
 data
+# tests/ is not shipped. Anything the running service needs lives under app/:
+# the evaluation dataset used to live here, and the evaluation page silently
+# ran zero cases in the image as a result.
 tests
 __pycache__
 *.pyc
