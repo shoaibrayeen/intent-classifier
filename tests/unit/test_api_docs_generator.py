@@ -38,6 +38,7 @@ def test_the_documentation_lives_under_docs():
         "architecture.html",
         "changelog.html",
         "demo.html",
+        "demo-hiring.html",
         "properties.html",
     }
     # The demo ships its recording and its animation alongside the page.
@@ -157,3 +158,38 @@ def test_generated_artefacts_are_not_committed():
         text=True,
     )
     assert result.returncode == 0, "graphify-out/ is not gitignored"
+
+
+def test_the_hiring_demo_artefacts_are_present_and_consistent():
+    """Both artefacts must describe the same recorded run."""
+    import json
+    from pathlib import Path
+
+    docs = Path(__file__).resolve().parents[2] / "docs"
+    run_file = docs / "demo-hiring-run.json"
+    assert run_file.exists(), "the hiring demo has not been recorded"
+    assert (docs / "demo-hiring.html").exists()
+    assert (docs / "demo-hiring.gif").exists()
+
+    run = json.loads(run_file.read_text())
+    page = (docs / "demo-hiring.html").read_text()
+
+    assert run["domain"]["name"] == "hiring"
+    assert run["intent_count"] >= 15
+    assert run["example_count"] >= 100
+    assert len(run["turns"]) >= 8
+    # The page reports the run's own numbers, not hand-written ones.
+    assert f"{run['intent_count']} intents" in page
+    assert f"{run['example_count']} examples" in page
+
+
+def test_the_hiring_catalogue_is_internally_consistent():
+    """Every intent names a tool the MCP server actually offers."""
+    from scripts.demos.hiring_catalogue import INTENTS, MCP_SERVER
+
+    offered = {t["name"] for t in MCP_SERVER["tools"]["tools"]}
+    for intent in INTENTS:
+        assert intent["tool"] in offered, f"{intent['name']} maps to an unknown tool"
+        assert len(intent["examples"]) >= 8, f"{intent['name']} has too few examples"
+        assert intent["description"], intent["name"]
+    assert len({i["name"] for i in INTENTS}) == len(INTENTS), "duplicate intent name"

@@ -96,6 +96,23 @@
 <h2 id="unreleased">Unreleased</h2>
 <p class="muted">Documentation layout, the changelog itself, and playground fixes.</p>
 
+<h3>A worked example: a hiring platform</h3>
+<ul>
+  <li><code>docs/demo-hiring.html</code> builds an applicant tracking system from nothing and
+  shows every stage: the domain drafted from a one-line brief, an ATS server's 18 tools imported
+  over MCP, 18 intents with 152 examples, and a nine-turn conversation. Click any reply to see
+  how that turn was decided. <code>docs/demo-hiring.gif</code> walks the same run through the
+  application's pages.</li>
+  <li>Both are generated from one real run by <code>scripts/demos/</code>, and the run leaves its
+  data in Chroma so the catalogue can be inspected in the running service rather than taken on
+  trust.</li>
+  <li><strong>Building it found two misclassifications in the demo's own data</strong>, which is
+  what a demo is for. Intents that read too alike -- scheduling an interview beside rescheduling
+  one -- were separated by rewriting their examples, not by touching the engine. One demo query
+  was also a verbatim training example, which tests nothing; it was replaced with a phrasing the
+  catalogue has never seen.</li>
+</ul>
+
 <h3>Fixed: the evaluation page did nothing in Docker</h3>
 <p>
   The held-out dataset lived under <code>tests/</code>, which is not copied into the image, so in

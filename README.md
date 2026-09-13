@@ -431,6 +431,8 @@ Everything a reader opens lives in `docs/`, and the app serves it too.
 | `docs/changelog.html` | `/ui/changelog`, `/changelog` | what changed and why |
 | `docs/demo.html` | `/ui/demo` | a recorded conversation, interactive |
 | `docs/demo.gif` | `/ui/docs/demo.gif` | the same run as an animation |
+| `docs/demo-hiring.html` | `/ui/docs/demo-hiring.html` | a hiring platform built end to end |
+| `docs/demo-hiring.gif` | `/ui/docs/demo-hiring.gif` | the same run, page by page |
 
 The whole directory is served at `/ui/docs/`, because the documents link to each
 other by filename. Serving them under one prefix keeps those links working in
@@ -468,6 +470,18 @@ uv run --with pillow python -m scripts.build_demo
 
 It clears its own sessions first, so a re-recording cannot inherit entities from
 a previous run.
+
+A fuller worked example builds an applicant tracking system from nothing: a
+domain from a one-line brief, an ATS server's tools registered over MCP, 18
+intents with 152 examples, then a conversation classified against them.
+
+```bash
+uv run python -m scripts.demos.build_hiring_demo      # writes to Chroma
+uv run --with pillow python -m scripts.demos.render_hiring_demo
+```
+
+The catalogue is data in `scripts/demos/hiring_catalogue.py`, and the run leaves
+the `hiring` domain in the store so it can be browsed in the UI.
 
 ## Quickstart (Docker)
 

@@ -1,0 +1,4057 @@
+{
+ "domain": {
+  "name": "hiring",
+  "description": "an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline",
+  "status": "active",
+  "system_instructions": "You are acting as an HR and people-operations assistant. This is the hiring domain, which covers an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. Interpret every request in that role and use only the terminology the request itself contains. Never infer a value that is not stated; when an entity is not mentioned, leave it out rather than guessing.",
+  "user_instructions": "Users are HR staff and employees asking about themselves or colleagues, working with an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. They phrase requests informally, name things by their common business terms, and often refer back to items from earlier in the conversation.",
+  "id": "4f2ec2a7c62b404887f2013461d6c7c2",
+  "created_at": 1789298865.615052,
+  "updated_at": 1789298865.619833
+ },
+ "steps": [
+  {
+   "stage": "domain",
+   "headline": "created 'hiring'",
+   "detail": "The name and a one-line brief are all an administrator supplies. The role and vocabulary below were drafted from them and saved with the domain.",
+   "payload": {
+    "id": "4f2ec2a7c62b404887f2013461d6c7c2",
+    "description": "an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline",
+    "system_instructions": "You are acting as an HR and people-operations assistant. This is the hiring domain, which covers an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. Interpret every request in that role and use only the terminology the request itself contains. Never infer a value that is not stated; when an entity is not mentioned, leave it out rather than guessing.",
+    "user_instructions": "Users are HR staff and employees asking about themselves or colleagues, working with an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. They phrase requests informally, name things by their common business terms, and often refer back to items from earlier in the conversation."
+   }
+  },
+  {
+   "stage": "mcp",
+   "headline": "registered 18 ATS tools",
+   "detail": "Imported from the server's tools/list response. Each tool's own JSON Schema is what extracted entities are later matched against.",
+   "payload": {
+    "server": "ats",
+    "endpoint": "https://ats.internal/mcp",
+    "tools": [
+     {
+      "qualified_name": "mcp__ats__search_candidates",
+      "description": "Find candidates by skill, location, seniority or stage",
+      "arguments": [
+       "skill",
+       "location",
+       "seniority",
+       "stage"
+      ],
+      "required": []
+     },
+     {
+      "qualified_name": "mcp__ats__get_candidate",
+      "description": "Fetch one candidate's full profile",
+      "arguments": [
+       "candidate_id"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__compare_candidates",
+      "description": "Put two candidates side by side",
+      "arguments": [
+       "candidate_id",
+       "other_candidate_id"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__shortlist_candidate",
+      "description": "Add a candidate to a requisition's shortlist",
+      "arguments": [
+       "candidate_id",
+       "job_id"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__reject_candidate",
+      "description": "Reject a candidate with a reason",
+      "arguments": [
+       "candidate_id",
+       "reason"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__create_requisition",
+      "description": "Open a new requisition",
+      "arguments": [
+       "title",
+       "location",
+       "seniority",
+       "headcount"
+      ],
+      "required": [
+       "title"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__search_requisitions",
+      "description": "Find requisitions by status, team or location",
+      "arguments": [
+       "status",
+       "team",
+       "location"
+      ],
+      "required": []
+     },
+     {
+      "qualified_name": "mcp__ats__get_requisition_status",
+      "description": "Pipeline status for one requisition",
+      "arguments": [
+       "job_id"
+      ],
+      "required": [
+       "job_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__close_requisition",
+      "description": "Close a requisition",
+      "arguments": [
+       "job_id",
+       "reason"
+      ],
+      "required": [
+       "job_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__schedule_interview",
+      "description": "Book an interview",
+      "arguments": [
+       "candidate_id",
+       "interviewer",
+       "round",
+       "interview_date"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__reschedule_interview",
+      "description": "Move an existing interview",
+      "arguments": [
+       "candidate_id",
+       "interview_date"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__get_interview_feedback",
+      "description": "Read interview scorecards",
+      "arguments": [
+       "candidate_id",
+       "round"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__create_offer",
+      "description": "Raise an offer for a candidate",
+      "arguments": [
+       "candidate_id",
+       "job_id",
+       "salary"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__get_offer_status",
+      "description": "Where an offer has reached",
+      "arguments": [
+       "candidate_id"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__advance_application",
+      "description": "Move an application to the next stage",
+      "arguments": [
+       "candidate_id",
+       "stage"
+      ],
+      "required": [
+       "candidate_id"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__get_pipeline_report",
+      "description": "Funnel counts and conversion for a requisition or team",
+      "arguments": [
+       "job_id",
+       "team",
+       "period"
+      ],
+      "required": []
+     },
+     {
+      "qualified_name": "mcp__ats__submit_referral",
+      "description": "Refer someone for a role",
+      "arguments": [
+       "candidate_name",
+       "job_id"
+      ],
+      "required": [
+       "candidate_name"
+      ]
+     },
+     {
+      "qualified_name": "mcp__ats__get_sourcing_analytics",
+      "description": "Where candidates are coming from",
+      "arguments": [
+       "source",
+       "period"
+      ],
+      "required": []
+     }
+    ]
+   }
+  },
+  {
+   "stage": "intents",
+   "headline": "18 intents, 152 examples",
+   "detail": "Each intent declares what it accepts and which ATS tool serves it. The examples are the whole training signal: no model was fine-tuned.",
+   "payload": {
+    "intents": [
+     {
+      "name": "CANDIDATE_SEARCH",
+      "description": "Find candidates matching skills, location, seniority or pipeline stage.",
+      "tool": "search_candidates",
+      "mcp": "mcp__ats__search_candidates",
+      "entity_schema": {
+       "skill": {
+        "type": "string"
+       },
+       "location": {
+        "type": "string"
+       },
+       "seniority": {
+        "type": "enum",
+        "values": [
+         "INTERN",
+         "JUNIOR",
+         "SENIOR",
+         "STAFF",
+         "PRINCIPAL"
+        ]
+       },
+       "stage": {
+        "type": "enum",
+        "values": [
+         "APPLIED",
+         "SCREENING",
+         "INTERVIEW",
+         "OFFER",
+         "HIRED",
+         "REJECTED"
+        ]
+       }
+      },
+      "examples": [
+       "find senior backend engineers in Bangalore",
+       "show me candidates who know Kubernetes",
+       "search for staff engineers in Berlin",
+       "which candidates are at the screening stage",
+       "list frontend candidates in Dublin",
+       "any principal engineers in the pipeline",
+       "pull up candidates with Golang experience",
+       "look for junior data scientists in Pune",
+       "who have we got for machine learning roles"
+      ]
+     },
+     {
+      "name": "CANDIDATE_PROFILE",
+      "description": "Open one candidate's full profile.",
+      "tool": "get_candidate",
+      "mcp": "mcp__ats__get_candidate",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       }
+      },
+      "examples": [
+       "open candidate C-2201",
+       "show me the profile for C-3310",
+       "pull up candidate C-2201's details",
+       "I want to see C-4102's resume",
+       "view the full profile of candidate C-5567",
+       "what does candidate C-2201 look like",
+       "display candidate C-3310",
+       "get me the record for C-7781"
+      ]
+     },
+     {
+      "name": "CANDIDATE_COMPARE",
+      "description": "Put two candidates side by side.",
+      "tool": "compare_candidates",
+      "mcp": "mcp__ats__compare_candidates",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "other_candidate_id": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "compare candidate C-2201 with C-3310",
+       "put C-4102 and C-5567 side by side",
+       "how do C-2201 and C-3310 differ",
+       "which is stronger, C-4102 or C-7781",
+       "diff these two candidates",
+       "show me C-2201 against C-5567",
+       "contrast candidate C-3310 with C-4102",
+       "weigh up C-7781 versus C-2201"
+      ]
+     },
+     {
+      "name": "CANDIDATE_SHORTLIST",
+      "description": "Add a candidate to a requisition's shortlist.",
+      "tool": "shortlist_candidate",
+      "mcp": "mcp__ats__shortlist_candidate",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "job_id": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "shortlist candidate C-2201 for J-4471",
+       "add C-3310 to the shortlist",
+       "put candidate C-4102 forward for the staff role",
+       "move C-5567 onto the shortlist for J-4471",
+       "I want to shortlist C-7781",
+       "mark candidate C-2201 as shortlisted",
+       "add this candidate to J-4471's shortlist",
+       "please shortlist C-3310 for the backend req"
+      ]
+     },
+     {
+      "name": "CANDIDATE_REJECT",
+      "description": "Reject a candidate, with a reason.",
+      "tool": "reject_candidate",
+      "mcp": "mcp__ats__reject_candidate",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "reason": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "reject candidate C-2201",
+       "turn down C-3310, not enough depth",
+       "we are passing on candidate C-4102",
+       "decline C-5567 for this role",
+       "mark C-7781 as rejected",
+       "send a rejection to candidate C-2201",
+       "no further action on C-3310",
+       "close out candidate C-4102 as unsuccessful"
+      ]
+     },
+     {
+      "name": "JOB_CREATE",
+      "description": "Open a new requisition.",
+      "tool": "create_requisition",
+      "mcp": "mcp__ats__create_requisition",
+      "entity_schema": {
+       "title": {
+        "type": "string"
+       },
+       "location": {
+        "type": "string"
+       },
+       "seniority": {
+        "type": "enum",
+        "values": [
+         "INTERN",
+         "JUNIOR",
+         "SENIOR",
+         "STAFF",
+         "PRINCIPAL"
+        ]
+       },
+       "headcount": {
+        "type": "integer"
+       }
+      },
+      "examples": [
+       "open a new requisition for a senior backend engineer",
+       "create a job opening in Bangalore",
+       "raise a req for two platform engineers",
+       "I need to open a staff engineer role in Berlin",
+       "start a new requisition for a data scientist",
+       "set up a job posting for a junior designer",
+       "create a requisition for 3 support engineers",
+       "open a role for a principal architect in Dublin"
+      ]
+     },
+     {
+      "name": "JOB_SEARCH",
+      "description": "Find requisitions by status, team or location.",
+      "tool": "search_requisitions",
+      "mcp": "mcp__ats__search_requisitions",
+      "entity_schema": {
+       "status": {
+        "type": "enum",
+        "values": [
+         "OPEN",
+         "ON_HOLD",
+         "CLOSED",
+         "FILLED"
+        ]
+       },
+       "team": {
+        "type": "string"
+       },
+       "location": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "which requisitions are open right now",
+       "list the roles we are hiring for in Bangalore",
+       "show me all open reqs on the Platform team",
+       "what jobs are on hold",
+       "find requisitions for the Payments team",
+       "show me closed requisitions",
+       "which openings does Infrastructure have",
+       "list every filled requisition this quarter"
+      ]
+     },
+     {
+      "name": "JOB_STATUS",
+      "description": "Pipeline status for one requisition.",
+      "tool": "get_requisition_status",
+      "mcp": "mcp__ats__get_requisition_status",
+      "entity_schema": {
+       "job_id": {
+        "type": "string",
+        "required": true
+       }
+      },
+      "examples": [
+       "what is the status of requisition J-4471",
+       "how is J-6620 doing",
+       "where has req J-4471 got to",
+       "give me the state of J-8890",
+       "is J-6620 still open",
+       "status check on requisition J-4471",
+       "how many people are in the pipeline for J-8890",
+       "tell me where J-6620 stands"
+      ]
+     },
+     {
+      "name": "JOB_CLOSE",
+      "description": "Close a requisition.",
+      "tool": "close_requisition",
+      "mcp": "mcp__ats__close_requisition",
+      "entity_schema": {
+       "job_id": {
+        "type": "string",
+        "required": true
+       },
+       "reason": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "close requisition J-4471",
+       "we can shut down J-6620",
+       "cancel the req J-8890",
+       "mark J-4471 as closed, budget pulled",
+       "stop hiring for J-6620",
+       "close out requisition J-8890",
+       "put J-4471 to bed, role is filled",
+       "withdraw requisition J-6620"
+      ]
+     },
+     {
+      "name": "INTERVIEW_SCHEDULE",
+      "description": "Book an interview for a candidate.",
+      "tool": "schedule_interview",
+      "mcp": "mcp__ats__schedule_interview",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "interviewer": {
+        "type": "string"
+       },
+       "round": {
+        "type": "string"
+       },
+       "interview_date": {
+        "type": "date"
+       }
+      },
+      "examples": [
+       "schedule a new interview for candidate C-2201",
+       "book a first system design round for C-3310",
+       "set up an interview with C-4102 on March 3, 2026",
+       "arrange a screening call for candidate C-5567",
+       "put C-7781 in for a technical round",
+       "book the final round for C-2201",
+       "schedule C-3310 with the hiring manager next Tuesday",
+       "get a new interview in the diary for C-4102",
+       "line up an interview for candidate C-7781",
+       "set a date for C-2201's design round"
+      ]
+     },
+     {
+      "name": "INTERVIEW_RESCHEDULE",
+      "description": "Move an interview that is already booked.",
+      "tool": "reschedule_interview",
+      "mcp": "mcp__ats__reschedule_interview",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "interview_date": {
+        "type": "date"
+       }
+      },
+      "examples": [
+       "reschedule the interview we already booked for C-2201",
+       "move C-3310's existing interview to March 10, 2026",
+       "push back the round already in the diary for C-4102",
+       "shift C-5567's booked slot to next week",
+       "we need to rearrange the interview C-7781 already has",
+       "the time no longer works, move C-2201's interview",
+       "postpone the interview that is booked with C-3310",
+       "bring C-4102's already-scheduled interview forward",
+       "C-5567 cannot make the booked slot, find another"
+      ]
+     },
+     {
+      "name": "INTERVIEW_FEEDBACK",
+      "description": "Read the scorecards from a candidate's interviews.",
+      "tool": "get_interview_feedback",
+      "mcp": "mcp__ats__get_interview_feedback",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "round": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "what did the interviewers say about C-2201",
+       "show me the scorecards for candidate C-3310",
+       "pull the feedback for C-4102's design round",
+       "how did C-5567 do in the interview",
+       "read me the interview notes on C-7781",
+       "what was the verdict on candidate C-2201",
+       "get the panel feedback for C-3310",
+       "were the reviews positive for C-4102"
+      ]
+     },
+     {
+      "name": "OFFER_CREATE",
+      "description": "Raise an offer for a candidate.",
+      "tool": "create_offer",
+      "mcp": "mcp__ats__create_offer",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "job_id": {
+        "type": "string"
+       },
+       "salary": {
+        "type": "number"
+       }
+      },
+      "examples": [
+       "raise an offer for candidate C-2201",
+       "make an offer to C-3310 for J-4471",
+       "let us offer C-4102 the staff role",
+       "prepare an offer letter for candidate C-5567",
+       "extend an offer to C-7781",
+       "put together an offer for C-2201 at 4200000",
+       "we want to offer candidate C-3310",
+       "start the offer process for C-4102"
+      ]
+     },
+     {
+      "name": "OFFER_STATUS",
+      "description": "Where a candidate's offer has reached.",
+      "tool": "get_offer_status",
+      "mcp": "mcp__ats__get_offer_status",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       }
+      },
+      "examples": [
+       "has candidate C-2201 accepted yet",
+       "what is the offer status for C-3310",
+       "did C-4102 sign",
+       "where is the offer for candidate C-5567",
+       "is C-7781's offer still pending approval",
+       "check the offer state for C-2201",
+       "have we heard back from C-3310 on the offer",
+       "track the offer for candidate C-4102"
+      ]
+     },
+     {
+      "name": "APPLICATION_ADVANCE",
+      "description": "Move an application to the next stage of the pipeline.",
+      "tool": "advance_application",
+      "mcp": "mcp__ats__advance_application",
+      "entity_schema": {
+       "candidate_id": {
+        "type": "string",
+        "required": true
+       },
+       "stage": {
+        "type": "enum",
+        "values": [
+         "APPLIED",
+         "SCREENING",
+         "INTERVIEW",
+         "OFFER",
+         "HIRED",
+         "REJECTED"
+        ]
+       }
+      },
+      "examples": [
+       "move candidate C-2201 to the interview stage",
+       "advance C-3310 to OFFER",
+       "progress candidate C-4102 to screening",
+       "push C-5567 through to the next round",
+       "take C-7781 forward to interview",
+       "promote candidate C-2201 to the offer stage",
+       "move C-3310 along the pipeline",
+       "mark C-4102 as hired"
+      ]
+     },
+     {
+      "name": "PIPELINE_REPORT",
+      "description": "Funnel counts and conversion for a requisition, team or period.",
+      "tool": "get_pipeline_report",
+      "mcp": "mcp__ats__get_pipeline_report",
+      "entity_schema": {
+       "job_id": {
+        "type": "string"
+       },
+       "team": {
+        "type": "string"
+       },
+       "period": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "how is the hiring funnel looking this quarter",
+       "give me a pipeline report for J-4471",
+       "what is our conversion from screening to offer",
+       "show funnel numbers for the Platform team",
+       "how many candidates dropped off at interview",
+       "pipeline breakdown for the Payments team",
+       "report on our hiring throughput this month",
+       "where are we losing candidates"
+      ]
+     },
+     {
+      "name": "REFERRAL_SUBMIT",
+      "description": "Refer someone for an open role.",
+      "tool": "submit_referral",
+      "mcp": "mcp__ats__submit_referral",
+      "entity_schema": {
+       "candidate_name": {
+        "type": "string",
+        "required": true
+       },
+       "job_id": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "I want to refer Priya Raman for J-4471",
+       "submit a referral for Daniel Okafor",
+       "refer my former colleague Mei Lin",
+       "put forward Anita Desai as a referral",
+       "I am referring Tomas Novak for the platform role",
+       "add a referral for Sarah Whitfield",
+       "recommend Rahul Menon for J-6620",
+       "refer Kofi Mensah for an engineering opening",
+       "a friend of mine would be good for this, her name is Leila Haddad",
+       "referring someone I used to work with, Jonas Berg",
+       "I would like to refer a former teammate for an open role",
+       "please log a referral, the person is Ana Ruiz"
+      ]
+     },
+     {
+      "name": "SOURCING_ANALYTICS",
+      "description": "Where candidates are coming from, and which sources convert.",
+      "tool": "get_sourcing_analytics",
+      "mcp": "mcp__ats__get_sourcing_analytics",
+      "entity_schema": {
+       "source": {
+        "type": "string"
+       },
+       "period": {
+        "type": "string"
+       }
+      },
+      "examples": [
+       "which sourcing channel gives us the best candidates",
+       "how many hires came from referrals this year",
+       "break down applications by source",
+       "is LinkedIn worth the spend",
+       "compare agency hires against inbound",
+       "what share of candidates come from job boards",
+       "sourcing effectiveness for this quarter",
+       "which channels convert to offers"
+      ]
+     }
+    ],
+    "example_counts": {
+     "CANDIDATE_SEARCH": 9,
+     "CANDIDATE_PROFILE": 8,
+     "CANDIDATE_COMPARE": 8,
+     "CANDIDATE_SHORTLIST": 8,
+     "CANDIDATE_REJECT": 8,
+     "JOB_CREATE": 8,
+     "JOB_SEARCH": 8,
+     "JOB_STATUS": 8,
+     "JOB_CLOSE": 8,
+     "INTERVIEW_SCHEDULE": 10,
+     "INTERVIEW_RESCHEDULE": 9,
+     "INTERVIEW_FEEDBACK": 8,
+     "OFFER_CREATE": 8,
+     "OFFER_STATUS": 8,
+     "APPLICATION_ADVANCE": 8,
+     "PIPELINE_REPORT": 8,
+     "REFERRAL_SUBMIT": 12,
+     "SOURCING_ANALYTICS": 8
+    }
+   }
+  },
+  {
+   "stage": "index",
+   "headline": "indexed 152 examples",
+   "detail": "Both indexes are built as the examples land: dense vectors in Chroma and a BM25 index over the same text. They must agree, and the operations page says when they do not.",
+   "payload": {
+    "domain": "hiring",
+    "domain_id": "4f2ec2a7c62b404887f2013461d6c7c2",
+    "state": "ready",
+    "version": 36,
+    "built_at": "2026-09-13T11:27:46.700685+00:00",
+    "bm25_doc_count": 152,
+    "dense_count": 152,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   }
+  },
+  {
+   "stage": "conversation",
+   "headline": "9 turns in session 'hiring-demo'",
+   "detail": "Turns share a session id, so a follow-up is read against what came before and entities carry forward. Every turn stores its own decision, which is what makes it inspectable later.",
+   "payload": {
+    "session_id": "hiring-demo",
+    "turns": [
+     {
+      "query": "find senior backend engineers in Bangalore",
+      "note": "A plain search. Skill, location and seniority are extracted and mapped onto the ATS tool.",
+      "intent": "CANDIDATE_SEARCH",
+      "confidence": 0.7478,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 14.365,
+      "entities": {
+       "skill": "Bangalore",
+       "seniority": "SENIOR"
+      },
+      "tool": {
+       "name": "search_candidates",
+       "version": "v1",
+       "arguments": {
+        "skill": "Bangalore",
+        "seniority": "SENIOR"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "677dc890a97e44d69976f1dc4935387f",
+        "server": "ats",
+        "tool": "search_candidates",
+        "qualified_name": "mcp__ats__search_candidates",
+        "description": "Find candidates by skill, location, seniority or stage",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "skill": "Bangalore",
+         "seniority": "SENIOR"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "677dc890a97e44d69976f1dc4935387f",
+       "server": "ats",
+       "tool": "search_candidates",
+       "qualified_name": "mcp__ats__search_candidates",
+       "description": "Find candidates by skill, location, seniority or stage",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "skill": "Bangalore",
+        "seniority": "SENIOR"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 1,
+       "previous_turns": 0,
+       "previous_intent": null,
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 1.0,
+       "s_rrf": 0.9746,
+       "s_margin": 0.0164,
+       "s_support": 1.0,
+       "confidence": 0.7478,
+       "agg_top": 0.094333,
+       "agg_second": 0.092783,
+       "best_similarity": 1.0
+      },
+      "top_intents": [
+       {
+        "intent": "CANDIDATE_SEARCH",
+        "intent_id": "deb8233009c1490a8ff9fc921cd2af60",
+        "score": 0.094333,
+        "supporting_examples": 4,
+        "best_similarity": 1.0
+       },
+       {
+        "intent": "JOB_CREATE",
+        "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+        "score": 0.092783,
+        "supporting_examples": 5,
+        "best_similarity": 0.783778
+       },
+       {
+        "intent": "JOB_SEARCH",
+        "intent_id": "07f856edf18f4db3944f5db145a27729",
+        "score": 0.045702,
+        "supporting_examples": 2,
+        "best_similarity": 0.72554
+       },
+       {
+        "intent": "CANDIDATE_SHORTLIST",
+        "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+        "score": 0.014706,
+        "supporting_examples": 1,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "find senior backend engineers in Bangalore",
+        "intent": "CANDIDATE_SEARCH",
+        "score": 1.0
+       },
+       {
+        "text": "open a new requisition for a senior backend engineer",
+        "intent": "JOB_CREATE",
+        "score": 0.783778
+       },
+       {
+        "text": "create a job opening in Bangalore",
+        "intent": "JOB_CREATE",
+        "score": 0.733809
+       },
+       {
+        "text": "list the roles we are hiring for in Bangalore",
+        "intent": "JOB_SEARCH",
+        "score": 0.72554
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "find senior backend engineers in Bangalore",
+        "intent": "CANDIDATE_SEARCH",
+        "score": 22.54847
+       },
+       {
+        "text": "open a new requisition for a senior backend engineer",
+        "intent": "JOB_CREATE",
+        "score": 7.037232
+       },
+       {
+        "text": "create a job opening in Bangalore",
+        "intent": "JOB_CREATE",
+        "score": 6.483193
+       },
+       {
+        "text": "search for staff engineers in Berlin",
+        "intent": "CANDIDATE_SEARCH",
+        "score": 5.981198
+       }
+      ]
+     },
+     {
+      "query": "open candidate C-2201",
+      "note": "A different intent entirely, distinguished from the search by wording, not by keywords.",
+      "intent": "CANDIDATE_PROFILE",
+      "confidence": 0.7689,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 13.519,
+      "entities": {
+       "candidate_id": "C-2201"
+      },
+      "tool": {
+       "name": "get_candidate",
+       "version": "v1",
+       "arguments": {
+        "candidate_id": "C-2201"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1",
+        "server": "ats",
+        "tool": "get_candidate",
+        "qualified_name": "mcp__ats__get_candidate",
+        "description": "Fetch one candidate's full profile",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "candidate_id": "C-2201"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1",
+       "server": "ats",
+       "tool": "get_candidate",
+       "qualified_name": "mcp__ats__get_candidate",
+       "description": "Fetch one candidate's full profile",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "candidate_id": "C-2201"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 2,
+       "previous_turns": 1,
+       "previous_intent": "CANDIDATE_SEARCH",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 1.0,
+       "s_rrf": 0.8259,
+       "s_margin": 0.2496,
+       "s_support": 1.0,
+       "confidence": 0.7689,
+       "agg_top": 0.07994,
+       "agg_second": 0.059988,
+       "best_similarity": 1.0
+      },
+      "top_intents": [
+       {
+        "intent": "CANDIDATE_PROFILE",
+        "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+        "score": 0.07994,
+        "supporting_examples": 3,
+        "best_similarity": 1.0
+       },
+       {
+        "intent": "CANDIDATE_SHORTLIST",
+        "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+        "score": 0.059988,
+        "supporting_examples": 2,
+        "best_similarity": 0.846718
+       },
+       {
+        "intent": "CANDIDATE_COMPARE",
+        "intent_id": "956df946a017465aa7bb3b3a06266c24",
+        "score": 0.031498,
+        "supporting_examples": 1,
+        "best_similarity": 0.870089
+       },
+       {
+        "intent": "CANDIDATE_REJECT",
+        "intent_id": "1f6c8d1f42f4448691b4717f28092912",
+        "score": 0.030835,
+        "supporting_examples": 2,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "open candidate C-2201",
+        "intent": "CANDIDATE_PROFILE",
+        "score": 1.0
+       },
+       {
+        "text": "what does candidate C-2201 look like",
+        "intent": "CANDIDATE_PROFILE",
+        "score": 0.88908
+       },
+       {
+        "text": "pull up candidate C-2201's details",
+        "intent": "CANDIDATE_PROFILE",
+        "score": 0.87868
+       },
+       {
+        "text": "compare candidate C-2201 with C-3310",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 0.870089
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "open candidate C-2201",
+        "intent": "CANDIDATE_PROFILE",
+        "score": 8.873161
+       },
+       {
+        "text": "reject candidate C-2201",
+        "intent": "CANDIDATE_REJECT",
+        "score": 5.338142
+       },
+       {
+        "text": "compare candidate C-2201 with C-3310",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 4.765251
+       },
+       {
+        "text": "mark candidate C-2201 as shortlisted",
+        "intent": "CANDIDATE_SHORTLIST",
+        "score": 4.614255
+       }
+      ]
+     },
+     {
+      "query": "compare them with C-3310",
+      "note": "A follow-up: 'them' points back, so it is read against the previous turn.",
+      "intent": "CANDIDATE_COMPARE",
+      "confidence": 0.8714,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 14.943,
+      "entities": {
+       "candidate_id": "C-3310",
+       "other_candidate_id": "C-3310"
+      },
+      "tool": {
+       "name": "compare_candidates",
+       "version": "v1",
+       "arguments": {
+        "candidate_id": "C-3310",
+        "other_candidate_id": "C-3310"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "47055d5f35624167af1a83a0b7fe87ce",
+        "server": "ats",
+        "tool": "compare_candidates",
+        "qualified_name": "mcp__ats__compare_candidates",
+        "description": "Put two candidates side by side",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "candidate_id": "C-3310",
+         "other_candidate_id": "C-3310"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "47055d5f35624167af1a83a0b7fe87ce",
+       "server": "ats",
+       "tool": "compare_candidates",
+       "qualified_name": "mcp__ats__compare_candidates",
+       "description": "Put two candidates side by side",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "candidate_id": "C-3310",
+        "other_candidate_id": "C-3310"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 3,
+       "previous_turns": 2,
+       "previous_intent": "CANDIDATE_PROFILE",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 1.0,
+       "s_rrf": 0.9733,
+       "s_margin": 0.5123,
+       "s_support": 1.0,
+       "confidence": 0.8714,
+       "agg_top": 0.094211,
+       "agg_second": 0.04595,
+       "best_similarity": 0.90244
+      },
+      "top_intents": [
+       {
+        "intent": "CANDIDATE_COMPARE",
+        "intent_id": "956df946a017465aa7bb3b3a06266c24",
+        "score": 0.094211,
+        "supporting_examples": 3,
+        "best_similarity": 0.90244
+       },
+       {
+        "intent": "CANDIDATE_PROFILE",
+        "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+        "score": 0.04595,
+        "supporting_examples": 2,
+        "best_similarity": 0.840506
+       },
+       {
+        "intent": "INTERVIEW_FEEDBACK",
+        "intent_id": "9261cae33ba1495ea12ac250dc6772e3",
+        "score": 0.030835,
+        "supporting_examples": 2,
+        "best_similarity": 0.843625
+       },
+       {
+        "intent": "INTERVIEW_SCHEDULE",
+        "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+        "score": 0.030579,
+        "supporting_examples": 2,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "compare candidate C-2201 with C-3310",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 0.90244
+       },
+       {
+        "text": "show me the scorecards for candidate C-3310",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 0.843625
+       },
+       {
+        "text": "show me the profile for C-3310",
+        "intent": "CANDIDATE_PROFILE",
+        "score": 0.840506
+       },
+       {
+        "text": "how do C-2201 and C-3310 differ",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 0.834935
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "compare candidate C-2201 with C-3310",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 10.508561
+       },
+       {
+        "text": "contrast candidate C-3310 with C-4102",
+        "intent": "CANDIDATE_COMPARE",
+        "score": 6.369805
+       },
+       {
+        "text": "schedule C-3310 with the hiring manager next Tuesday",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 5.25806
+       },
+       {
+        "text": "postpone the interview that is booked with C-3310",
+        "intent": "INTERVIEW_RESCHEDULE",
+        "score": 5.25806
+       }
+      ]
+     },
+     {
+      "query": "book C-2201 in for a technical round on March 3, 2026",
+      "note": "An action rather than a lookup, and close in wording to rescheduling. The date is normalised to ISO 8601.",
+      "intent": "INTERVIEW_SCHEDULE",
+      "confidence": 0.8686,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 15.15,
+      "entities": {
+       "candidate_id": "C-2201",
+       "interview_date": "2026-03-03"
+      },
+      "tool": {
+       "name": "schedule_interview",
+       "version": "v1",
+       "arguments": {
+        "candidate_id": "C-2201",
+        "interview_date": "2026-03-03"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "3225cc9294c649cda845e22154d36b99",
+        "server": "ats",
+        "tool": "schedule_interview",
+        "qualified_name": "mcp__ats__schedule_interview",
+        "description": "Book an interview",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "candidate_id": "C-2201",
+         "interview_date": "2026-03-03"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "3225cc9294c649cda845e22154d36b99",
+       "server": "ats",
+       "tool": "schedule_interview",
+       "qualified_name": "mcp__ats__schedule_interview",
+       "description": "Book an interview",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "candidate_id": "C-2201",
+        "interview_date": "2026-03-03"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 4,
+       "previous_turns": 3,
+       "previous_intent": "CANDIDATE_COMPARE",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 0.8623,
+       "s_rrf": 0.987,
+       "s_margin": 0.6802,
+       "s_support": 1.0,
+       "confidence": 0.8686,
+       "agg_top": 0.095534,
+       "agg_second": 0.03055,
+       "best_similarity": 0.844913
+      },
+      "top_intents": [
+       {
+        "intent": "INTERVIEW_SCHEDULE",
+        "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+        "score": 0.095534,
+        "supporting_examples": 6,
+        "best_similarity": 0.844913
+       },
+       {
+        "intent": "OFFER_STATUS",
+        "intent_id": "09aa68cf833146a09627fb873b9e1945",
+        "score": 0.03055,
+        "supporting_examples": 2,
+        "best_similarity": 0.752006
+       },
+       {
+        "intent": "INTERVIEW_RESCHEDULE",
+        "intent_id": "987d0bb7a95f4611bc4b207388d33d54",
+        "score": 0.03009,
+        "supporting_examples": 2,
+        "best_similarity": 0.0
+       },
+       {
+        "intent": "CANDIDATE_PROFILE",
+        "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+        "score": 0.015152,
+        "supporting_examples": 1,
+        "best_similarity": 0.736828
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "book the final round for C-2201",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 0.844913
+       },
+       {
+        "text": "put C-7781 in for a technical round",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 0.790951
+       },
+       {
+        "text": "set a date for C-2201's design round",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 0.790764
+       },
+       {
+        "text": "check the offer state for C-2201",
+        "intent": "OFFER_STATUS",
+        "score": 0.752006
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "set up an interview with C-4102 on March 3, 2026",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 12.836067
+       },
+       {
+        "text": "put C-7781 in for a technical round",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 12.530616
+       },
+       {
+        "text": "book the final round for C-2201",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 10.577929
+       },
+       {
+        "text": "book a first system design round for C-3310",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 9.338367
+       }
+      ]
+     },
+     {
+      "query": "what did the interviewers say",
+      "note": "Referential again. The candidate carries forward from earlier in the conversation.",
+      "intent": "INTERVIEW_FEEDBACK",
+      "confidence": 0.7591,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 15.375,
+      "entities": {
+       "candidate_id": "C-2201"
+      },
+      "tool": {
+       "name": "get_interview_feedback",
+       "version": "v1",
+       "arguments": {
+        "candidate_id": "C-2201"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "822d05e5ef924df699d7b6ba89b93699",
+        "server": "ats",
+        "tool": "get_interview_feedback",
+        "qualified_name": "mcp__ats__get_interview_feedback",
+        "description": "Read interview scorecards",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "candidate_id": "C-2201"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "822d05e5ef924df699d7b6ba89b93699",
+       "server": "ats",
+       "tool": "get_interview_feedback",
+       "qualified_name": "mcp__ats__get_interview_feedback",
+       "description": "Read interview scorecards",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "candidate_id": "C-2201"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 5,
+       "previous_turns": 4,
+       "previous_intent": "INTERVIEW_SCHEDULE",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": [
+        "candidate_id"
+       ]
+      },
+      "breakdown": {
+       "s_dense": 0.7132,
+       "s_rrf": 0.8282,
+       "s_margin": 0.6098,
+       "s_support": 1.0,
+       "confidence": 0.7591,
+       "agg_top": 0.080158,
+       "agg_second": 0.031281,
+       "best_similarity": 0.785298
+      },
+      "top_intents": [
+       {
+        "intent": "INTERVIEW_FEEDBACK",
+        "intent_id": "9261cae33ba1495ea12ac250dc6772e3",
+        "score": 0.080158,
+        "supporting_examples": 4,
+        "best_similarity": 0.785298
+       },
+       {
+        "intent": "OFFER_STATUS",
+        "intent_id": "09aa68cf833146a09627fb873b9e1945",
+        "score": 0.031281,
+        "supporting_examples": 2,
+        "best_similarity": 0.0
+       },
+       {
+        "intent": "PIPELINE_REPORT",
+        "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec",
+        "score": 0.030622,
+        "supporting_examples": 2,
+        "best_similarity": 0.760029
+       },
+       {
+        "intent": "INTERVIEW_SCHEDULE",
+        "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+        "score": 0.029877,
+        "supporting_examples": 2,
+        "best_similarity": 0.715255
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "what did the interviewers say about C-2201",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 0.785298
+       },
+       {
+        "text": "how many candidates dropped off at interview",
+        "intent": "PIPELINE_REPORT",
+        "score": 0.760029
+       },
+       {
+        "text": "read me the interview notes on C-7781",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 0.7572
+       },
+       {
+        "text": "how did C-5567 do in the interview",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 0.734792
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "what did the interviewers say about C-2201",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 15.667034
+       },
+       {
+        "text": "did C-4102 sign",
+        "intent": "OFFER_STATUS",
+        "score": 4.684555
+       },
+       {
+        "text": "how did C-5567 do in the interview",
+        "intent": "INTERVIEW_FEEDBACK",
+        "score": 4.210122
+       },
+       {
+        "text": "what is the status of requisition J-4471",
+        "intent": "JOB_STATUS",
+        "score": 3.335125
+       }
+      ]
+     },
+     {
+      "query": "raise an offer for C-2201",
+      "note": "Late-pipeline intent, close in wording to several others and still separated.",
+      "intent": "OFFER_CREATE",
+      "confidence": 0.8429,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 14.63,
+      "entities": {
+       "candidate_id": "C-2201",
+       "job_id": "C-2201"
+      },
+      "tool": {
+       "name": "create_offer",
+       "version": "v1",
+       "arguments": {
+        "candidate_id": "C-2201",
+        "job_id": "C-2201"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "222cb85a450e455389a11c559c1a35f9",
+        "server": "ats",
+        "tool": "create_offer",
+        "qualified_name": "mcp__ats__create_offer",
+        "description": "Raise an offer for a candidate",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "candidate_id": "C-2201",
+         "job_id": "C-2201"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "222cb85a450e455389a11c559c1a35f9",
+       "server": "ats",
+       "tool": "create_offer",
+       "qualified_name": "mcp__ats__create_offer",
+       "description": "Raise an offer for a candidate",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "candidate_id": "C-2201",
+        "job_id": "C-2201"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 6,
+       "previous_turns": 5,
+       "previous_intent": "INTERVIEW_FEEDBACK",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 1.0,
+       "s_rrf": 0.995,
+       "s_margin": 0.3768,
+       "s_support": 1.0,
+       "confidence": 0.8429,
+       "agg_top": 0.096303,
+       "agg_second": 0.060016,
+       "best_similarity": 0.946985
+      },
+      "top_intents": [
+       {
+        "intent": "OFFER_CREATE",
+        "intent_id": "e888b2fedb944e75baede642d252824a",
+        "score": 0.096303,
+        "supporting_examples": 6,
+        "best_similarity": 0.946985
+       },
+       {
+        "intent": "OFFER_STATUS",
+        "intent_id": "09aa68cf833146a09627fb873b9e1945",
+        "score": 0.060016,
+        "supporting_examples": 3,
+        "best_similarity": 0.902418
+       },
+       {
+        "intent": "APPLICATION_ADVANCE",
+        "intent_id": "a5e2c5c04ae94cf799ee63a578940656",
+        "score": 0.030331,
+        "supporting_examples": 1,
+        "best_similarity": 0.886958
+       },
+       {
+        "intent": "JOB_CREATE",
+        "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+        "score": 0.014925,
+        "supporting_examples": 1,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "raise an offer for candidate C-2201",
+        "intent": "OFFER_CREATE",
+        "score": 0.946985
+       },
+       {
+        "text": "put together an offer for C-2201 at 4200000",
+        "intent": "OFFER_CREATE",
+        "score": 0.924695
+       },
+       {
+        "text": "check the offer state for C-2201",
+        "intent": "OFFER_STATUS",
+        "score": 0.902418
+       },
+       {
+        "text": "promote candidate C-2201 to the offer stage",
+        "intent": "APPLICATION_ADVANCE",
+        "score": 0.886958
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "raise an offer for candidate C-2201",
+        "intent": "OFFER_CREATE",
+        "score": 12.392482
+       },
+       {
+        "text": "put together an offer for C-2201 at 4200000",
+        "intent": "OFFER_CREATE",
+        "score": 7.323653
+       },
+       {
+        "text": "extend an offer to C-7781",
+        "intent": "OFFER_CREATE",
+        "score": 6.25252
+       },
+       {
+        "text": "prepare an offer letter for candidate C-5567",
+        "intent": "OFFER_CREATE",
+        "score": 6.041024
+       }
+      ]
+     },
+     {
+      "query": "how is the hiring funnel looking this quarter",
+      "note": "Analytics, with no candidate involved. A different shape of question in the same domain.",
+      "intent": "PIPELINE_REPORT",
+      "confidence": 0.7895,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 15.21,
+      "entities": {
+       "job_id": "C-2201"
+      },
+      "tool": {
+       "name": "get_pipeline_report",
+       "version": "v1",
+       "arguments": {
+        "job_id": "C-2201"
+       },
+       "missing_required": [],
+       "ready": true,
+       "mcp": {
+        "tool_id": "c8db9c8b345a41c297c629116fac1715",
+        "server": "ats",
+        "tool": "get_pipeline_report",
+        "qualified_name": "mcp__ats__get_pipeline_report",
+        "description": "Funnel counts and conversion for a requisition or team",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "job_id": "C-2201"
+        },
+        "missing_required": [],
+        "unmapped": [],
+        "ready": true,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "c8db9c8b345a41c297c629116fac1715",
+       "server": "ats",
+       "tool": "get_pipeline_report",
+       "qualified_name": "mcp__ats__get_pipeline_report",
+       "description": "Funnel counts and conversion for a requisition or team",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "job_id": "C-2201"
+       },
+       "missing_required": [],
+       "unmapped": [],
+       "ready": true,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 7,
+       "previous_turns": 5,
+       "previous_intent": "OFFER_CREATE",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": [
+        "job_id"
+       ]
+      },
+      "breakdown": {
+       "s_dense": 1.0,
+       "s_rrf": 0.9749,
+       "s_margin": 0.1831,
+       "s_support": 1.0,
+       "confidence": 0.7895,
+       "agg_top": 0.094362,
+       "agg_second": 0.07708,
+       "best_similarity": 0.999998
+      },
+      "top_intents": [
+       {
+        "intent": "PIPELINE_REPORT",
+        "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec",
+        "score": 0.094362,
+        "supporting_examples": 4,
+        "best_similarity": 0.999998
+       },
+       {
+        "intent": "SOURCING_ANALYTICS",
+        "intent_id": "08fc5dfb04ce4882bbdac4d6fddf44ef",
+        "score": 0.07708,
+        "supporting_examples": 3,
+        "best_similarity": 0.815442
+       },
+       {
+        "intent": "JOB_SEARCH",
+        "intent_id": "07f856edf18f4db3944f5db145a27729",
+        "score": 0.060276,
+        "supporting_examples": 3,
+        "best_similarity": 0.759874
+       },
+       {
+        "intent": "JOB_STATUS",
+        "intent_id": "ce23ef92ef4b46679998a5671e344205",
+        "score": 0.015385,
+        "supporting_examples": 1,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "how is the hiring funnel looking this quarter",
+        "intent": "PIPELINE_REPORT",
+        "score": 0.999998
+       },
+       {
+        "text": "sourcing effectiveness for this quarter",
+        "intent": "SOURCING_ANALYTICS",
+        "score": 0.815442
+       },
+       {
+        "text": "report on our hiring throughput this month",
+        "intent": "PIPELINE_REPORT",
+        "score": 0.780101
+       },
+       {
+        "text": "list every filled requisition this quarter",
+        "intent": "JOB_SEARCH",
+        "score": 0.759874
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "how is the hiring funnel looking this quarter",
+        "intent": "PIPELINE_REPORT",
+        "score": 23.258746
+       },
+       {
+        "text": "sourcing effectiveness for this quarter",
+        "intent": "SOURCING_ANALYTICS",
+        "score": 7.621723
+       },
+       {
+        "text": "list every filled requisition this quarter",
+        "intent": "JOB_SEARCH",
+        "score": 7.104945
+       },
+       {
+        "text": "report on our hiring throughput this month",
+        "intent": "PIPELINE_REPORT",
+        "score": 6.183676
+       }
+      ]
+     },
+     {
+      "query": "I'd like to put forward a former colleague, Priya Raman, for the platform role",
+      "note": "A person's name rather than an id, phrased unlike any stored example. This is retrieval generalising rather than matching a string.",
+      "intent": "REFERRAL_SUBMIT",
+      "confidence": 0.7349,
+      "reason": null,
+      "strategy": "hybrid_rrf",
+      "latency_ms": 16.229,
+      "entities": {
+       "job_id": "C-2201"
+      },
+      "tool": {
+       "name": "submit_referral",
+       "version": "v1",
+       "arguments": {
+        "job_id": "C-2201"
+       },
+       "missing_required": [
+        "candidate_name"
+       ],
+       "ready": false,
+       "mcp": {
+        "tool_id": "cde725d5910945f89d703de63ef07abf",
+        "server": "ats",
+        "tool": "submit_referral",
+        "qualified_name": "mcp__ats__submit_referral",
+        "description": "Refer someone for a role",
+        "transport": "http",
+        "endpoint": "https://ats.internal/mcp",
+        "arguments": {
+         "job_id": "C-2201"
+        },
+        "missing_required": [
+         "candidate_name"
+        ],
+        "unmapped": [],
+        "ready": false,
+        "unresolved": null
+       }
+      },
+      "mcp": {
+       "tool_id": "cde725d5910945f89d703de63ef07abf",
+       "server": "ats",
+       "tool": "submit_referral",
+       "qualified_name": "mcp__ats__submit_referral",
+       "description": "Refer someone for a role",
+       "transport": "http",
+       "endpoint": "https://ats.internal/mcp",
+       "arguments": {
+        "job_id": "C-2201"
+       },
+       "missing_required": [
+        "candidate_name"
+       ],
+       "unmapped": [],
+       "ready": false,
+       "unresolved": null
+      },
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 8,
+       "previous_turns": 5,
+       "previous_intent": "PIPELINE_REPORT",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": [
+        "job_id"
+       ]
+      },
+      "breakdown": {
+       "s_dense": 0.5719,
+       "s_rrf": 0.9949,
+       "s_margin": 0.5441,
+       "s_support": 1.0,
+       "confidence": 0.7349,
+       "agg_top": 0.096295,
+       "agg_second": 0.043905,
+       "best_similarity": 0.728747
+      },
+      "top_intents": [
+       {
+        "intent": "REFERRAL_SUBMIT",
+        "intent_id": "7dd949c5dc3741d1a23ac3c25e6ecb25",
+        "score": 0.096295,
+        "supporting_examples": 5,
+        "best_similarity": 0.728747
+       },
+       {
+        "intent": "JOB_CREATE",
+        "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+        "score": 0.043905,
+        "supporting_examples": 4,
+        "best_similarity": 0.667278
+       },
+       {
+        "intent": "CANDIDATE_SHORTLIST",
+        "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+        "score": 0.031025,
+        "supporting_examples": 1,
+        "best_similarity": 0.685062
+       },
+       {
+        "intent": "JOB_CLOSE",
+        "intent_id": "9f2a04c23c0948eca9ac5c8d2eb0cb24",
+        "score": 0.015152,
+        "supporting_examples": 1,
+        "best_similarity": 0.0
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "I want to refer Priya Raman for J-4471",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 0.728747
+       },
+       {
+        "text": "refer my former colleague Mei Lin",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 0.711073
+       },
+       {
+        "text": "I am referring Tomas Novak for the platform role",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 0.706743
+       },
+       {
+        "text": "I would like to refer a former teammate for an open role",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 0.703109
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "I would like to refer a former teammate for an open role",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 11.468252
+       },
+       {
+        "text": "I want to refer Priya Raman for J-4471",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 10.219625
+       },
+       {
+        "text": "put candidate C-4102 forward for the staff role",
+        "intent": "CANDIDATE_SHORTLIST",
+        "score": 9.577707
+       },
+       {
+        "text": "refer my former colleague Mei Lin",
+        "intent": "REFERRAL_SUBMIT",
+        "score": 9.396827
+       }
+      ]
+     },
+     {
+      "query": "what is the weather today",
+      "note": "Out of scope. It must come back UNKNOWN rather than being absorbed by the conversation.",
+      "intent": "UNKNOWN",
+      "confidence": 0.3584,
+      "reason": "low_similarity",
+      "strategy": "hybrid_rrf",
+      "latency_ms": 10.051,
+      "entities": {},
+      "tool": null,
+      "mcp": {},
+      "context": {
+       "session_id": "hiring-demo",
+       "turn": 9,
+       "previous_turns": 5,
+       "previous_intent": "REFERRAL_SUBMIT",
+       "used_for_retrieval": false,
+       "retrieval_text": null,
+       "carried_entities": []
+      },
+      "breakdown": {
+       "s_dense": 0.2425,
+       "s_rrf": 0.4826,
+       "s_margin": 0.0117,
+       "s_support": 1.0,
+       "confidence": 0.3584,
+       "agg_top": 0.046708,
+       "agg_second": 0.046161,
+       "best_similarity": 0.597005
+      },
+      "top_intents": [
+       {
+        "intent": "INTERVIEW_SCHEDULE",
+        "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+        "score": 0.046708,
+        "supporting_examples": 3,
+        "best_similarity": 0.597005
+       },
+       {
+        "intent": "INTERVIEW_RESCHEDULE",
+        "intent_id": "987d0bb7a95f4611bc4b207388d33d54",
+        "score": 0.046161,
+        "supporting_examples": 3,
+        "best_similarity": 0.581824
+       },
+       {
+        "intent": "JOB_SEARCH",
+        "intent_id": "07f856edf18f4db3944f5db145a27729",
+        "score": 0.031319,
+        "supporting_examples": 2,
+        "best_similarity": 0.619716
+       },
+       {
+        "intent": "JOB_STATUS",
+        "intent_id": "ce23ef92ef4b46679998a5671e344205",
+        "score": 0.031319,
+        "supporting_examples": 2,
+        "best_similarity": 0.571021
+       }
+      ],
+      "dense_hits": [
+       {
+        "text": "which requisitions are open right now",
+        "intent": "JOB_SEARCH",
+        "score": 0.619716
+       },
+       {
+        "text": "schedule C-3310 with the hiring manager next Tuesday",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 0.597005
+       },
+       {
+        "text": "put C-7781 in for a technical round",
+        "intent": "INTERVIEW_SCHEDULE",
+        "score": 0.586831
+       },
+       {
+        "text": "shift C-5567's booked slot to next week",
+        "intent": "INTERVIEW_RESCHEDULE",
+        "score": 0.581824
+       }
+      ],
+      "bm25_hits": [
+       {
+        "text": "what is the status of requisition J-4471",
+        "intent": "JOB_STATUS",
+        "score": 5.47838
+       },
+       {
+        "text": "what is the offer status for C-3310",
+        "intent": "OFFER_STATUS",
+        "score": 5.47838
+       },
+       {
+        "text": "what is our conversion from screening to offer",
+        "intent": "PIPELINE_REPORT",
+        "score": 4.834016
+       },
+       {
+        "text": "is LinkedIn worth the spend",
+        "intent": "SOURCING_ANALYTICS",
+        "score": 3.395891
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "stage": "session",
+   "headline": "9 turns recorded",
+   "detail": "Reopened from Chroma rather than recomputed. Opening this session in the playground shows exactly what happened, not a fresh classification.",
+   "payload": {
+    "last_intent": "UNKNOWN",
+    "entities_in_play": {
+     "skill": "Bangalore",
+     "seniority": "SENIOR",
+     "candidate_id": "C-2201",
+     "other_candidate_id": "C-3310",
+     "interview_date": "2026-03-03",
+     "job_id": "C-2201"
+    },
+    "turns": [
+     {
+      "turn": 1,
+      "text": "find senior backend engineers in Bangalore",
+      "intent": "CANDIDATE_SEARCH",
+      "confidence": 0.7478,
+      "entities": {
+       "skill": "Bangalore",
+       "seniority": "SENIOR"
+      }
+     },
+     {
+      "turn": 2,
+      "text": "open candidate C-2201",
+      "intent": "CANDIDATE_PROFILE",
+      "confidence": 0.7689,
+      "entities": {
+       "candidate_id": "C-2201"
+      }
+     },
+     {
+      "turn": 3,
+      "text": "compare them with C-3310",
+      "intent": "CANDIDATE_COMPARE",
+      "confidence": 0.8714,
+      "entities": {
+       "candidate_id": "C-3310",
+       "other_candidate_id": "C-3310"
+      }
+     },
+     {
+      "turn": 4,
+      "text": "book C-2201 in for a technical round on March 3, 2026",
+      "intent": "INTERVIEW_SCHEDULE",
+      "confidence": 0.8686,
+      "entities": {
+       "candidate_id": "C-2201",
+       "interview_date": "2026-03-03"
+      }
+     },
+     {
+      "turn": 5,
+      "text": "what did the interviewers say",
+      "intent": "INTERVIEW_FEEDBACK",
+      "confidence": 0.7591,
+      "entities": {
+       "candidate_id": "C-2201"
+      }
+     },
+     {
+      "turn": 6,
+      "text": "raise an offer for C-2201",
+      "intent": "OFFER_CREATE",
+      "confidence": 0.8429,
+      "entities": {
+       "candidate_id": "C-2201",
+       "job_id": "C-2201"
+      }
+     },
+     {
+      "turn": 7,
+      "text": "how is the hiring funnel looking this quarter",
+      "intent": "PIPELINE_REPORT",
+      "confidence": 0.7895,
+      "entities": {
+       "job_id": "C-2201"
+      }
+     },
+     {
+      "turn": 8,
+      "text": "I'd like to put forward a former colleague, Priya Raman, for the platform role",
+      "intent": "REFERRAL_SUBMIT",
+      "confidence": 0.7349,
+      "entities": {
+       "job_id": "C-2201"
+      }
+     },
+     {
+      "turn": 9,
+      "text": "what is the weather today",
+      "intent": "UNKNOWN",
+      "confidence": 0.3584,
+      "entities": {}
+     }
+    ]
+   }
+  }
+ ],
+ "turns": [
+  {
+   "query": "find senior backend engineers in Bangalore",
+   "note": "A plain search. Skill, location and seniority are extracted and mapped onto the ATS tool.",
+   "intent": "CANDIDATE_SEARCH",
+   "confidence": 0.7478,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 14.365,
+   "entities": {
+    "skill": "Bangalore",
+    "seniority": "SENIOR"
+   },
+   "tool": {
+    "name": "search_candidates",
+    "version": "v1",
+    "arguments": {
+     "skill": "Bangalore",
+     "seniority": "SENIOR"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "677dc890a97e44d69976f1dc4935387f",
+     "server": "ats",
+     "tool": "search_candidates",
+     "qualified_name": "mcp__ats__search_candidates",
+     "description": "Find candidates by skill, location, seniority or stage",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "skill": "Bangalore",
+      "seniority": "SENIOR"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "677dc890a97e44d69976f1dc4935387f",
+    "server": "ats",
+    "tool": "search_candidates",
+    "qualified_name": "mcp__ats__search_candidates",
+    "description": "Find candidates by skill, location, seniority or stage",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "skill": "Bangalore",
+     "seniority": "SENIOR"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 1,
+    "previous_turns": 0,
+    "previous_intent": null,
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.9746,
+    "s_margin": 0.0164,
+    "s_support": 1.0,
+    "confidence": 0.7478,
+    "agg_top": 0.094333,
+    "agg_second": 0.092783,
+    "best_similarity": 1.0
+   },
+   "top_intents": [
+    {
+     "intent": "CANDIDATE_SEARCH",
+     "intent_id": "deb8233009c1490a8ff9fc921cd2af60",
+     "score": 0.094333,
+     "supporting_examples": 4,
+     "best_similarity": 1.0
+    },
+    {
+     "intent": "JOB_CREATE",
+     "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+     "score": 0.092783,
+     "supporting_examples": 5,
+     "best_similarity": 0.783778
+    },
+    {
+     "intent": "JOB_SEARCH",
+     "intent_id": "07f856edf18f4db3944f5db145a27729",
+     "score": 0.045702,
+     "supporting_examples": 2,
+     "best_similarity": 0.72554
+    },
+    {
+     "intent": "CANDIDATE_SHORTLIST",
+     "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+     "score": 0.014706,
+     "supporting_examples": 1,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "find senior backend engineers in Bangalore",
+     "intent": "CANDIDATE_SEARCH",
+     "score": 1.0
+    },
+    {
+     "text": "open a new requisition for a senior backend engineer",
+     "intent": "JOB_CREATE",
+     "score": 0.783778
+    },
+    {
+     "text": "create a job opening in Bangalore",
+     "intent": "JOB_CREATE",
+     "score": 0.733809
+    },
+    {
+     "text": "list the roles we are hiring for in Bangalore",
+     "intent": "JOB_SEARCH",
+     "score": 0.72554
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "find senior backend engineers in Bangalore",
+     "intent": "CANDIDATE_SEARCH",
+     "score": 22.54847
+    },
+    {
+     "text": "open a new requisition for a senior backend engineer",
+     "intent": "JOB_CREATE",
+     "score": 7.037232
+    },
+    {
+     "text": "create a job opening in Bangalore",
+     "intent": "JOB_CREATE",
+     "score": 6.483193
+    },
+    {
+     "text": "search for staff engineers in Berlin",
+     "intent": "CANDIDATE_SEARCH",
+     "score": 5.981198
+    }
+   ]
+  },
+  {
+   "query": "open candidate C-2201",
+   "note": "A different intent entirely, distinguished from the search by wording, not by keywords.",
+   "intent": "CANDIDATE_PROFILE",
+   "confidence": 0.7689,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 13.519,
+   "entities": {
+    "candidate_id": "C-2201"
+   },
+   "tool": {
+    "name": "get_candidate",
+    "version": "v1",
+    "arguments": {
+     "candidate_id": "C-2201"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1",
+     "server": "ats",
+     "tool": "get_candidate",
+     "qualified_name": "mcp__ats__get_candidate",
+     "description": "Fetch one candidate's full profile",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "candidate_id": "C-2201"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1",
+    "server": "ats",
+    "tool": "get_candidate",
+    "qualified_name": "mcp__ats__get_candidate",
+    "description": "Fetch one candidate's full profile",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "candidate_id": "C-2201"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 2,
+    "previous_turns": 1,
+    "previous_intent": "CANDIDATE_SEARCH",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.8259,
+    "s_margin": 0.2496,
+    "s_support": 1.0,
+    "confidence": 0.7689,
+    "agg_top": 0.07994,
+    "agg_second": 0.059988,
+    "best_similarity": 1.0
+   },
+   "top_intents": [
+    {
+     "intent": "CANDIDATE_PROFILE",
+     "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+     "score": 0.07994,
+     "supporting_examples": 3,
+     "best_similarity": 1.0
+    },
+    {
+     "intent": "CANDIDATE_SHORTLIST",
+     "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+     "score": 0.059988,
+     "supporting_examples": 2,
+     "best_similarity": 0.846718
+    },
+    {
+     "intent": "CANDIDATE_COMPARE",
+     "intent_id": "956df946a017465aa7bb3b3a06266c24",
+     "score": 0.031498,
+     "supporting_examples": 1,
+     "best_similarity": 0.870089
+    },
+    {
+     "intent": "CANDIDATE_REJECT",
+     "intent_id": "1f6c8d1f42f4448691b4717f28092912",
+     "score": 0.030835,
+     "supporting_examples": 2,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "open candidate C-2201",
+     "intent": "CANDIDATE_PROFILE",
+     "score": 1.0
+    },
+    {
+     "text": "what does candidate C-2201 look like",
+     "intent": "CANDIDATE_PROFILE",
+     "score": 0.88908
+    },
+    {
+     "text": "pull up candidate C-2201's details",
+     "intent": "CANDIDATE_PROFILE",
+     "score": 0.87868
+    },
+    {
+     "text": "compare candidate C-2201 with C-3310",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 0.870089
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "open candidate C-2201",
+     "intent": "CANDIDATE_PROFILE",
+     "score": 8.873161
+    },
+    {
+     "text": "reject candidate C-2201",
+     "intent": "CANDIDATE_REJECT",
+     "score": 5.338142
+    },
+    {
+     "text": "compare candidate C-2201 with C-3310",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 4.765251
+    },
+    {
+     "text": "mark candidate C-2201 as shortlisted",
+     "intent": "CANDIDATE_SHORTLIST",
+     "score": 4.614255
+    }
+   ]
+  },
+  {
+   "query": "compare them with C-3310",
+   "note": "A follow-up: 'them' points back, so it is read against the previous turn.",
+   "intent": "CANDIDATE_COMPARE",
+   "confidence": 0.8714,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 14.943,
+   "entities": {
+    "candidate_id": "C-3310",
+    "other_candidate_id": "C-3310"
+   },
+   "tool": {
+    "name": "compare_candidates",
+    "version": "v1",
+    "arguments": {
+     "candidate_id": "C-3310",
+     "other_candidate_id": "C-3310"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "47055d5f35624167af1a83a0b7fe87ce",
+     "server": "ats",
+     "tool": "compare_candidates",
+     "qualified_name": "mcp__ats__compare_candidates",
+     "description": "Put two candidates side by side",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "candidate_id": "C-3310",
+      "other_candidate_id": "C-3310"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "47055d5f35624167af1a83a0b7fe87ce",
+    "server": "ats",
+    "tool": "compare_candidates",
+    "qualified_name": "mcp__ats__compare_candidates",
+    "description": "Put two candidates side by side",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "candidate_id": "C-3310",
+     "other_candidate_id": "C-3310"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 3,
+    "previous_turns": 2,
+    "previous_intent": "CANDIDATE_PROFILE",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.9733,
+    "s_margin": 0.5123,
+    "s_support": 1.0,
+    "confidence": 0.8714,
+    "agg_top": 0.094211,
+    "agg_second": 0.04595,
+    "best_similarity": 0.90244
+   },
+   "top_intents": [
+    {
+     "intent": "CANDIDATE_COMPARE",
+     "intent_id": "956df946a017465aa7bb3b3a06266c24",
+     "score": 0.094211,
+     "supporting_examples": 3,
+     "best_similarity": 0.90244
+    },
+    {
+     "intent": "CANDIDATE_PROFILE",
+     "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+     "score": 0.04595,
+     "supporting_examples": 2,
+     "best_similarity": 0.840506
+    },
+    {
+     "intent": "INTERVIEW_FEEDBACK",
+     "intent_id": "9261cae33ba1495ea12ac250dc6772e3",
+     "score": 0.030835,
+     "supporting_examples": 2,
+     "best_similarity": 0.843625
+    },
+    {
+     "intent": "INTERVIEW_SCHEDULE",
+     "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+     "score": 0.030579,
+     "supporting_examples": 2,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "compare candidate C-2201 with C-3310",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 0.90244
+    },
+    {
+     "text": "show me the scorecards for candidate C-3310",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 0.843625
+    },
+    {
+     "text": "show me the profile for C-3310",
+     "intent": "CANDIDATE_PROFILE",
+     "score": 0.840506
+    },
+    {
+     "text": "how do C-2201 and C-3310 differ",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 0.834935
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "compare candidate C-2201 with C-3310",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 10.508561
+    },
+    {
+     "text": "contrast candidate C-3310 with C-4102",
+     "intent": "CANDIDATE_COMPARE",
+     "score": 6.369805
+    },
+    {
+     "text": "schedule C-3310 with the hiring manager next Tuesday",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 5.25806
+    },
+    {
+     "text": "postpone the interview that is booked with C-3310",
+     "intent": "INTERVIEW_RESCHEDULE",
+     "score": 5.25806
+    }
+   ]
+  },
+  {
+   "query": "book C-2201 in for a technical round on March 3, 2026",
+   "note": "An action rather than a lookup, and close in wording to rescheduling. The date is normalised to ISO 8601.",
+   "intent": "INTERVIEW_SCHEDULE",
+   "confidence": 0.8686,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 15.15,
+   "entities": {
+    "candidate_id": "C-2201",
+    "interview_date": "2026-03-03"
+   },
+   "tool": {
+    "name": "schedule_interview",
+    "version": "v1",
+    "arguments": {
+     "candidate_id": "C-2201",
+     "interview_date": "2026-03-03"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "3225cc9294c649cda845e22154d36b99",
+     "server": "ats",
+     "tool": "schedule_interview",
+     "qualified_name": "mcp__ats__schedule_interview",
+     "description": "Book an interview",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "candidate_id": "C-2201",
+      "interview_date": "2026-03-03"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "3225cc9294c649cda845e22154d36b99",
+    "server": "ats",
+    "tool": "schedule_interview",
+    "qualified_name": "mcp__ats__schedule_interview",
+    "description": "Book an interview",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "candidate_id": "C-2201",
+     "interview_date": "2026-03-03"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 4,
+    "previous_turns": 3,
+    "previous_intent": "CANDIDATE_COMPARE",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 0.8623,
+    "s_rrf": 0.987,
+    "s_margin": 0.6802,
+    "s_support": 1.0,
+    "confidence": 0.8686,
+    "agg_top": 0.095534,
+    "agg_second": 0.03055,
+    "best_similarity": 0.844913
+   },
+   "top_intents": [
+    {
+     "intent": "INTERVIEW_SCHEDULE",
+     "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+     "score": 0.095534,
+     "supporting_examples": 6,
+     "best_similarity": 0.844913
+    },
+    {
+     "intent": "OFFER_STATUS",
+     "intent_id": "09aa68cf833146a09627fb873b9e1945",
+     "score": 0.03055,
+     "supporting_examples": 2,
+     "best_similarity": 0.752006
+    },
+    {
+     "intent": "INTERVIEW_RESCHEDULE",
+     "intent_id": "987d0bb7a95f4611bc4b207388d33d54",
+     "score": 0.03009,
+     "supporting_examples": 2,
+     "best_similarity": 0.0
+    },
+    {
+     "intent": "CANDIDATE_PROFILE",
+     "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d",
+     "score": 0.015152,
+     "supporting_examples": 1,
+     "best_similarity": 0.736828
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "book the final round for C-2201",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 0.844913
+    },
+    {
+     "text": "put C-7781 in for a technical round",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 0.790951
+    },
+    {
+     "text": "set a date for C-2201's design round",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 0.790764
+    },
+    {
+     "text": "check the offer state for C-2201",
+     "intent": "OFFER_STATUS",
+     "score": 0.752006
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "set up an interview with C-4102 on March 3, 2026",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 12.836067
+    },
+    {
+     "text": "put C-7781 in for a technical round",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 12.530616
+    },
+    {
+     "text": "book the final round for C-2201",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 10.577929
+    },
+    {
+     "text": "book a first system design round for C-3310",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 9.338367
+    }
+   ]
+  },
+  {
+   "query": "what did the interviewers say",
+   "note": "Referential again. The candidate carries forward from earlier in the conversation.",
+   "intent": "INTERVIEW_FEEDBACK",
+   "confidence": 0.7591,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 15.375,
+   "entities": {
+    "candidate_id": "C-2201"
+   },
+   "tool": {
+    "name": "get_interview_feedback",
+    "version": "v1",
+    "arguments": {
+     "candidate_id": "C-2201"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "822d05e5ef924df699d7b6ba89b93699",
+     "server": "ats",
+     "tool": "get_interview_feedback",
+     "qualified_name": "mcp__ats__get_interview_feedback",
+     "description": "Read interview scorecards",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "candidate_id": "C-2201"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "822d05e5ef924df699d7b6ba89b93699",
+    "server": "ats",
+    "tool": "get_interview_feedback",
+    "qualified_name": "mcp__ats__get_interview_feedback",
+    "description": "Read interview scorecards",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "candidate_id": "C-2201"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 5,
+    "previous_turns": 4,
+    "previous_intent": "INTERVIEW_SCHEDULE",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": [
+     "candidate_id"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 0.7132,
+    "s_rrf": 0.8282,
+    "s_margin": 0.6098,
+    "s_support": 1.0,
+    "confidence": 0.7591,
+    "agg_top": 0.080158,
+    "agg_second": 0.031281,
+    "best_similarity": 0.785298
+   },
+   "top_intents": [
+    {
+     "intent": "INTERVIEW_FEEDBACK",
+     "intent_id": "9261cae33ba1495ea12ac250dc6772e3",
+     "score": 0.080158,
+     "supporting_examples": 4,
+     "best_similarity": 0.785298
+    },
+    {
+     "intent": "OFFER_STATUS",
+     "intent_id": "09aa68cf833146a09627fb873b9e1945",
+     "score": 0.031281,
+     "supporting_examples": 2,
+     "best_similarity": 0.0
+    },
+    {
+     "intent": "PIPELINE_REPORT",
+     "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec",
+     "score": 0.030622,
+     "supporting_examples": 2,
+     "best_similarity": 0.760029
+    },
+    {
+     "intent": "INTERVIEW_SCHEDULE",
+     "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+     "score": 0.029877,
+     "supporting_examples": 2,
+     "best_similarity": 0.715255
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "what did the interviewers say about C-2201",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 0.785298
+    },
+    {
+     "text": "how many candidates dropped off at interview",
+     "intent": "PIPELINE_REPORT",
+     "score": 0.760029
+    },
+    {
+     "text": "read me the interview notes on C-7781",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 0.7572
+    },
+    {
+     "text": "how did C-5567 do in the interview",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 0.734792
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "what did the interviewers say about C-2201",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 15.667034
+    },
+    {
+     "text": "did C-4102 sign",
+     "intent": "OFFER_STATUS",
+     "score": 4.684555
+    },
+    {
+     "text": "how did C-5567 do in the interview",
+     "intent": "INTERVIEW_FEEDBACK",
+     "score": 4.210122
+    },
+    {
+     "text": "what is the status of requisition J-4471",
+     "intent": "JOB_STATUS",
+     "score": 3.335125
+    }
+   ]
+  },
+  {
+   "query": "raise an offer for C-2201",
+   "note": "Late-pipeline intent, close in wording to several others and still separated.",
+   "intent": "OFFER_CREATE",
+   "confidence": 0.8429,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 14.63,
+   "entities": {
+    "candidate_id": "C-2201",
+    "job_id": "C-2201"
+   },
+   "tool": {
+    "name": "create_offer",
+    "version": "v1",
+    "arguments": {
+     "candidate_id": "C-2201",
+     "job_id": "C-2201"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "222cb85a450e455389a11c559c1a35f9",
+     "server": "ats",
+     "tool": "create_offer",
+     "qualified_name": "mcp__ats__create_offer",
+     "description": "Raise an offer for a candidate",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "candidate_id": "C-2201",
+      "job_id": "C-2201"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "222cb85a450e455389a11c559c1a35f9",
+    "server": "ats",
+    "tool": "create_offer",
+    "qualified_name": "mcp__ats__create_offer",
+    "description": "Raise an offer for a candidate",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "candidate_id": "C-2201",
+     "job_id": "C-2201"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 6,
+    "previous_turns": 5,
+    "previous_intent": "INTERVIEW_FEEDBACK",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.995,
+    "s_margin": 0.3768,
+    "s_support": 1.0,
+    "confidence": 0.8429,
+    "agg_top": 0.096303,
+    "agg_second": 0.060016,
+    "best_similarity": 0.946985
+   },
+   "top_intents": [
+    {
+     "intent": "OFFER_CREATE",
+     "intent_id": "e888b2fedb944e75baede642d252824a",
+     "score": 0.096303,
+     "supporting_examples": 6,
+     "best_similarity": 0.946985
+    },
+    {
+     "intent": "OFFER_STATUS",
+     "intent_id": "09aa68cf833146a09627fb873b9e1945",
+     "score": 0.060016,
+     "supporting_examples": 3,
+     "best_similarity": 0.902418
+    },
+    {
+     "intent": "APPLICATION_ADVANCE",
+     "intent_id": "a5e2c5c04ae94cf799ee63a578940656",
+     "score": 0.030331,
+     "supporting_examples": 1,
+     "best_similarity": 0.886958
+    },
+    {
+     "intent": "JOB_CREATE",
+     "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+     "score": 0.014925,
+     "supporting_examples": 1,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "raise an offer for candidate C-2201",
+     "intent": "OFFER_CREATE",
+     "score": 0.946985
+    },
+    {
+     "text": "put together an offer for C-2201 at 4200000",
+     "intent": "OFFER_CREATE",
+     "score": 0.924695
+    },
+    {
+     "text": "check the offer state for C-2201",
+     "intent": "OFFER_STATUS",
+     "score": 0.902418
+    },
+    {
+     "text": "promote candidate C-2201 to the offer stage",
+     "intent": "APPLICATION_ADVANCE",
+     "score": 0.886958
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "raise an offer for candidate C-2201",
+     "intent": "OFFER_CREATE",
+     "score": 12.392482
+    },
+    {
+     "text": "put together an offer for C-2201 at 4200000",
+     "intent": "OFFER_CREATE",
+     "score": 7.323653
+    },
+    {
+     "text": "extend an offer to C-7781",
+     "intent": "OFFER_CREATE",
+     "score": 6.25252
+    },
+    {
+     "text": "prepare an offer letter for candidate C-5567",
+     "intent": "OFFER_CREATE",
+     "score": 6.041024
+    }
+   ]
+  },
+  {
+   "query": "how is the hiring funnel looking this quarter",
+   "note": "Analytics, with no candidate involved. A different shape of question in the same domain.",
+   "intent": "PIPELINE_REPORT",
+   "confidence": 0.7895,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 15.21,
+   "entities": {
+    "job_id": "C-2201"
+   },
+   "tool": {
+    "name": "get_pipeline_report",
+    "version": "v1",
+    "arguments": {
+     "job_id": "C-2201"
+    },
+    "missing_required": [],
+    "ready": true,
+    "mcp": {
+     "tool_id": "c8db9c8b345a41c297c629116fac1715",
+     "server": "ats",
+     "tool": "get_pipeline_report",
+     "qualified_name": "mcp__ats__get_pipeline_report",
+     "description": "Funnel counts and conversion for a requisition or team",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "job_id": "C-2201"
+     },
+     "missing_required": [],
+     "unmapped": [],
+     "ready": true,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "c8db9c8b345a41c297c629116fac1715",
+    "server": "ats",
+    "tool": "get_pipeline_report",
+    "qualified_name": "mcp__ats__get_pipeline_report",
+    "description": "Funnel counts and conversion for a requisition or team",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "job_id": "C-2201"
+    },
+    "missing_required": [],
+    "unmapped": [],
+    "ready": true,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 7,
+    "previous_turns": 5,
+    "previous_intent": "OFFER_CREATE",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": [
+     "job_id"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 1.0,
+    "s_rrf": 0.9749,
+    "s_margin": 0.1831,
+    "s_support": 1.0,
+    "confidence": 0.7895,
+    "agg_top": 0.094362,
+    "agg_second": 0.07708,
+    "best_similarity": 0.999998
+   },
+   "top_intents": [
+    {
+     "intent": "PIPELINE_REPORT",
+     "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec",
+     "score": 0.094362,
+     "supporting_examples": 4,
+     "best_similarity": 0.999998
+    },
+    {
+     "intent": "SOURCING_ANALYTICS",
+     "intent_id": "08fc5dfb04ce4882bbdac4d6fddf44ef",
+     "score": 0.07708,
+     "supporting_examples": 3,
+     "best_similarity": 0.815442
+    },
+    {
+     "intent": "JOB_SEARCH",
+     "intent_id": "07f856edf18f4db3944f5db145a27729",
+     "score": 0.060276,
+     "supporting_examples": 3,
+     "best_similarity": 0.759874
+    },
+    {
+     "intent": "JOB_STATUS",
+     "intent_id": "ce23ef92ef4b46679998a5671e344205",
+     "score": 0.015385,
+     "supporting_examples": 1,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "how is the hiring funnel looking this quarter",
+     "intent": "PIPELINE_REPORT",
+     "score": 0.999998
+    },
+    {
+     "text": "sourcing effectiveness for this quarter",
+     "intent": "SOURCING_ANALYTICS",
+     "score": 0.815442
+    },
+    {
+     "text": "report on our hiring throughput this month",
+     "intent": "PIPELINE_REPORT",
+     "score": 0.780101
+    },
+    {
+     "text": "list every filled requisition this quarter",
+     "intent": "JOB_SEARCH",
+     "score": 0.759874
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "how is the hiring funnel looking this quarter",
+     "intent": "PIPELINE_REPORT",
+     "score": 23.258746
+    },
+    {
+     "text": "sourcing effectiveness for this quarter",
+     "intent": "SOURCING_ANALYTICS",
+     "score": 7.621723
+    },
+    {
+     "text": "list every filled requisition this quarter",
+     "intent": "JOB_SEARCH",
+     "score": 7.104945
+    },
+    {
+     "text": "report on our hiring throughput this month",
+     "intent": "PIPELINE_REPORT",
+     "score": 6.183676
+    }
+   ]
+  },
+  {
+   "query": "I'd like to put forward a former colleague, Priya Raman, for the platform role",
+   "note": "A person's name rather than an id, phrased unlike any stored example. This is retrieval generalising rather than matching a string.",
+   "intent": "REFERRAL_SUBMIT",
+   "confidence": 0.7349,
+   "reason": null,
+   "strategy": "hybrid_rrf",
+   "latency_ms": 16.229,
+   "entities": {
+    "job_id": "C-2201"
+   },
+   "tool": {
+    "name": "submit_referral",
+    "version": "v1",
+    "arguments": {
+     "job_id": "C-2201"
+    },
+    "missing_required": [
+     "candidate_name"
+    ],
+    "ready": false,
+    "mcp": {
+     "tool_id": "cde725d5910945f89d703de63ef07abf",
+     "server": "ats",
+     "tool": "submit_referral",
+     "qualified_name": "mcp__ats__submit_referral",
+     "description": "Refer someone for a role",
+     "transport": "http",
+     "endpoint": "https://ats.internal/mcp",
+     "arguments": {
+      "job_id": "C-2201"
+     },
+     "missing_required": [
+      "candidate_name"
+     ],
+     "unmapped": [],
+     "ready": false,
+     "unresolved": null
+    }
+   },
+   "mcp": {
+    "tool_id": "cde725d5910945f89d703de63ef07abf",
+    "server": "ats",
+    "tool": "submit_referral",
+    "qualified_name": "mcp__ats__submit_referral",
+    "description": "Refer someone for a role",
+    "transport": "http",
+    "endpoint": "https://ats.internal/mcp",
+    "arguments": {
+     "job_id": "C-2201"
+    },
+    "missing_required": [
+     "candidate_name"
+    ],
+    "unmapped": [],
+    "ready": false,
+    "unresolved": null
+   },
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 8,
+    "previous_turns": 5,
+    "previous_intent": "PIPELINE_REPORT",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": [
+     "job_id"
+    ]
+   },
+   "breakdown": {
+    "s_dense": 0.5719,
+    "s_rrf": 0.9949,
+    "s_margin": 0.5441,
+    "s_support": 1.0,
+    "confidence": 0.7349,
+    "agg_top": 0.096295,
+    "agg_second": 0.043905,
+    "best_similarity": 0.728747
+   },
+   "top_intents": [
+    {
+     "intent": "REFERRAL_SUBMIT",
+     "intent_id": "7dd949c5dc3741d1a23ac3c25e6ecb25",
+     "score": 0.096295,
+     "supporting_examples": 5,
+     "best_similarity": 0.728747
+    },
+    {
+     "intent": "JOB_CREATE",
+     "intent_id": "227b5ff0dd84452e85aa53c92c306d39",
+     "score": 0.043905,
+     "supporting_examples": 4,
+     "best_similarity": 0.667278
+    },
+    {
+     "intent": "CANDIDATE_SHORTLIST",
+     "intent_id": "1e978eda9a044159a513f3c75a6ff38b",
+     "score": 0.031025,
+     "supporting_examples": 1,
+     "best_similarity": 0.685062
+    },
+    {
+     "intent": "JOB_CLOSE",
+     "intent_id": "9f2a04c23c0948eca9ac5c8d2eb0cb24",
+     "score": 0.015152,
+     "supporting_examples": 1,
+     "best_similarity": 0.0
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "I want to refer Priya Raman for J-4471",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 0.728747
+    },
+    {
+     "text": "refer my former colleague Mei Lin",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 0.711073
+    },
+    {
+     "text": "I am referring Tomas Novak for the platform role",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 0.706743
+    },
+    {
+     "text": "I would like to refer a former teammate for an open role",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 0.703109
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "I would like to refer a former teammate for an open role",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 11.468252
+    },
+    {
+     "text": "I want to refer Priya Raman for J-4471",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 10.219625
+    },
+    {
+     "text": "put candidate C-4102 forward for the staff role",
+     "intent": "CANDIDATE_SHORTLIST",
+     "score": 9.577707
+    },
+    {
+     "text": "refer my former colleague Mei Lin",
+     "intent": "REFERRAL_SUBMIT",
+     "score": 9.396827
+    }
+   ]
+  },
+  {
+   "query": "what is the weather today",
+   "note": "Out of scope. It must come back UNKNOWN rather than being absorbed by the conversation.",
+   "intent": "UNKNOWN",
+   "confidence": 0.3584,
+   "reason": "low_similarity",
+   "strategy": "hybrid_rrf",
+   "latency_ms": 10.051,
+   "entities": {},
+   "tool": null,
+   "mcp": {},
+   "context": {
+    "session_id": "hiring-demo",
+    "turn": 9,
+    "previous_turns": 5,
+    "previous_intent": "REFERRAL_SUBMIT",
+    "used_for_retrieval": false,
+    "retrieval_text": null,
+    "carried_entities": []
+   },
+   "breakdown": {
+    "s_dense": 0.2425,
+    "s_rrf": 0.4826,
+    "s_margin": 0.0117,
+    "s_support": 1.0,
+    "confidence": 0.3584,
+    "agg_top": 0.046708,
+    "agg_second": 0.046161,
+    "best_similarity": 0.597005
+   },
+   "top_intents": [
+    {
+     "intent": "INTERVIEW_SCHEDULE",
+     "intent_id": "3d6472e11663459dbcee6fdcec799f92",
+     "score": 0.046708,
+     "supporting_examples": 3,
+     "best_similarity": 0.597005
+    },
+    {
+     "intent": "INTERVIEW_RESCHEDULE",
+     "intent_id": "987d0bb7a95f4611bc4b207388d33d54",
+     "score": 0.046161,
+     "supporting_examples": 3,
+     "best_similarity": 0.581824
+    },
+    {
+     "intent": "JOB_SEARCH",
+     "intent_id": "07f856edf18f4db3944f5db145a27729",
+     "score": 0.031319,
+     "supporting_examples": 2,
+     "best_similarity": 0.619716
+    },
+    {
+     "intent": "JOB_STATUS",
+     "intent_id": "ce23ef92ef4b46679998a5671e344205",
+     "score": 0.031319,
+     "supporting_examples": 2,
+     "best_similarity": 0.571021
+    }
+   ],
+   "dense_hits": [
+    {
+     "text": "which requisitions are open right now",
+     "intent": "JOB_SEARCH",
+     "score": 0.619716
+    },
+    {
+     "text": "schedule C-3310 with the hiring manager next Tuesday",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 0.597005
+    },
+    {
+     "text": "put C-7781 in for a technical round",
+     "intent": "INTERVIEW_SCHEDULE",
+     "score": 0.586831
+    },
+    {
+     "text": "shift C-5567's booked slot to next week",
+     "intent": "INTERVIEW_RESCHEDULE",
+     "score": 0.581824
+    }
+   ],
+   "bm25_hits": [
+    {
+     "text": "what is the status of requisition J-4471",
+     "intent": "JOB_STATUS",
+     "score": 5.47838
+    },
+    {
+     "text": "what is the offer status for C-3310",
+     "intent": "OFFER_STATUS",
+     "score": 5.47838
+    },
+    {
+     "text": "what is our conversion from screening to offer",
+     "intent": "PIPELINE_REPORT",
+     "score": 4.834016
+    },
+    {
+     "text": "is LinkedIn worth the spend",
+     "intent": "SOURCING_ANALYTICS",
+     "score": 3.395891
+    }
+   ]
+  }
+ ],
+ "health": {
+  "status": "ok",
+  "version": "0.1.0",
+  "chroma": "ok",
+  "chroma_mode": "persistent",
+  "model": "BAAI/bge-small-en-v1.5",
+  "model_loaded": true,
+  "embedding_dimension": 384,
+  "entity_extraction": {
+   "enabled": true,
+   "provider_configured": true,
+   "provider": "mock",
+   "model": "gpt-4o"
+  },
+  "sessions_enabled": true,
+  "auth_enabled": false,
+  "tracing_enabled": false,
+  "ab_testing_enabled": false,
+  "strategy": "hybrid_rrf"
+ },
+ "index": {
+  "status": "ok",
+  "domains": [
+   {
+    "domain": "contract lifecycle management",
+    "domain_id": "12a1a239e6f3490babf75167530ef1d3",
+    "state": "ready",
+    "version": 1,
+    "built_at": "2026-09-13T11:24:09.014889+00:00",
+    "bm25_doc_count": 60,
+    "dense_count": 60,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   },
+   {
+    "domain": "Document",
+    "domain_id": "7a5696f9416e4cb08dc9a938a6496f38",
+    "state": "ready",
+    "version": 1,
+    "built_at": "2026-09-13T11:24:09.016829+00:00",
+    "bm25_doc_count": 60,
+    "dense_count": 60,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   },
+   {
+    "domain": "hiring",
+    "domain_id": "4f2ec2a7c62b404887f2013461d6c7c2",
+    "state": "ready",
+    "version": 36,
+    "built_at": "2026-09-13T11:27:46.700685+00:00",
+    "bm25_doc_count": 152,
+    "dense_count": 152,
+    "tokenizer_version": "simple_v1",
+    "in_sync": true
+   }
+  ]
+ },
+ "intent_count": 18,
+ "example_count": 152,
+ "mcp_tools": [
+  {
+   "server": "ats",
+   "name": "advance_application",
+   "description": "Move an application to the next stage",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "stage": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "e29cc5113d4443b991e28eeae81659ae",
+   "created_at": 1789298789.700824,
+   "updated_at": 1789298865.684473,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__advance_application"
+  },
+  {
+   "server": "ats",
+   "name": "close_requisition",
+   "description": "Close a requisition",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "job_id": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "job_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "97501496a6e94bcf877e895248076b5a",
+   "created_at": 1789298789.674813,
+   "updated_at": 1789298865.659544,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__close_requisition"
+  },
+  {
+   "server": "ats",
+   "name": "compare_candidates",
+   "description": "Put two candidates side by side",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "other_candidate_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "47055d5f35624167af1a83a0b7fe87ce",
+   "created_at": 1789298789.64823,
+   "updated_at": 1789298865.634318,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__compare_candidates"
+  },
+  {
+   "server": "ats",
+   "name": "create_offer",
+   "description": "Raise an offer for a candidate",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "job_id": {
+      "type": "string"
+     },
+     "salary": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "222cb85a450e455389a11c559c1a35f9",
+   "created_at": 1789298789.692857,
+   "updated_at": 1789298865.676277,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__create_offer"
+  },
+  {
+   "server": "ats",
+   "name": "create_requisition",
+   "description": "Open a new requisition",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "location": {
+      "type": "string"
+     },
+     "seniority": {
+      "type": "string"
+     },
+     "headcount": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "title"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "c8bf7f2eabdd4274b5d178725db45514",
+   "created_at": 1789298789.661966,
+   "updated_at": 1789298865.646945,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__create_requisition"
+  },
+  {
+   "server": "ats",
+   "name": "get_candidate",
+   "description": "Fetch one candidate's full profile",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "b891c2d5a6154ac8a9f1a3094edf3ee1",
+   "created_at": 1789298789.642678,
+   "updated_at": 1789298865.630155,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_candidate"
+  },
+  {
+   "server": "ats",
+   "name": "get_interview_feedback",
+   "description": "Read interview scorecards",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "round": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "822d05e5ef924df699d7b6ba89b93699",
+   "created_at": 1789298789.688545,
+   "updated_at": 1789298865.672195,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_interview_feedback"
+  },
+  {
+   "server": "ats",
+   "name": "get_offer_status",
+   "description": "Where an offer has reached",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "53d6ad5c63ee422489450e2509f71a67",
+   "created_at": 1789298789.696716,
+   "updated_at": 1789298865.680192,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_offer_status"
+  },
+  {
+   "server": "ats",
+   "name": "get_pipeline_report",
+   "description": "Funnel counts and conversion for a requisition or team",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "job_id": {
+      "type": "string"
+     },
+     "team": {
+      "type": "string"
+     },
+     "period": {
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "c8db9c8b345a41c297c629116fac1715",
+   "created_at": 1789298789.704673,
+   "updated_at": 1789298865.688345,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_pipeline_report"
+  },
+  {
+   "server": "ats",
+   "name": "get_requisition_status",
+   "description": "Pipeline status for one requisition",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "job_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "job_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "6b5fab1718eb4b999a6dd859aed13eb9",
+   "created_at": 1789298789.670439,
+   "updated_at": 1789298865.655305,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_requisition_status"
+  },
+  {
+   "server": "ats",
+   "name": "get_sourcing_analytics",
+   "description": "Where candidates are coming from",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "source": {
+      "type": "string"
+     },
+     "period": {
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "03e78614fe40458682aeadc18a27ed0a",
+   "created_at": 1789298789.712583,
+   "updated_at": 1789298865.696478,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__get_sourcing_analytics"
+  },
+  {
+   "server": "ats",
+   "name": "reject_candidate",
+   "description": "Reject a candidate with a reason",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "30cd5a692dc34dbb9ecf615393e8cc39",
+   "created_at": 1789298789.657674,
+   "updated_at": 1789298865.642913,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__reject_candidate"
+  },
+  {
+   "server": "ats",
+   "name": "reschedule_interview",
+   "description": "Move an existing interview",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "interview_date": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "2b14b54920874925a7ebdf09a2ac2488",
+   "created_at": 1789298789.684115,
+   "updated_at": 1789298865.667518,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__reschedule_interview"
+  },
+  {
+   "server": "ats",
+   "name": "schedule_interview",
+   "description": "Book an interview",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "interviewer": {
+      "type": "string"
+     },
+     "round": {
+      "type": "string"
+     },
+     "interview_date": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "3225cc9294c649cda845e22154d36b99",
+   "created_at": 1789298789.679682,
+   "updated_at": 1789298865.663516,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__schedule_interview"
+  },
+  {
+   "server": "ats",
+   "name": "search_candidates",
+   "description": "Find candidates by skill, location, seniority or stage",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "skill": {
+      "type": "string"
+     },
+     "location": {
+      "type": "string"
+     },
+     "seniority": {
+      "type": "string"
+     },
+     "stage": {
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "677dc890a97e44d69976f1dc4935387f",
+   "created_at": 1789298789.633697,
+   "updated_at": 1789298865.625809,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__search_candidates"
+  },
+  {
+   "server": "ats",
+   "name": "search_requisitions",
+   "description": "Find requisitions by status, team or location",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "status": {
+      "type": "string"
+     },
+     "team": {
+      "type": "string"
+     },
+     "location": {
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "c805cfce202c41398ff105ef20893f29",
+   "created_at": 1789298789.666199,
+   "updated_at": 1789298865.651032,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__search_requisitions"
+  },
+  {
+   "server": "ats",
+   "name": "shortlist_candidate",
+   "description": "Add a candidate to a requisition's shortlist",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_id": {
+      "type": "string"
+     },
+     "job_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_id"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "cc51080eab2148d0a75a9e247ee1a811",
+   "created_at": 1789298789.653053,
+   "updated_at": 1789298865.638707,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__shortlist_candidate"
+  },
+  {
+   "server": "ats",
+   "name": "submit_referral",
+   "description": "Refer someone for a role",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "candidate_name": {
+      "type": "string"
+     },
+     "job_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "candidate_name"
+    ]
+   },
+   "transport": "http",
+   "endpoint": "https://ats.internal/mcp",
+   "status": "active",
+   "id": "cde725d5910945f89d703de63ef07abf",
+   "created_at": 1789298789.708427,
+   "updated_at": 1789298865.692444,
+   "bound_intents": 1,
+   "qualified_name": "mcp__ats__submit_referral"
+  }
+ ]
+}

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiring demo · Intent Classifier</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#faf9f7; --panel:#fff; --ink:#1a1917; --muted:#6b6a66; --line:#e3e1dc;
+  --accent:#2f6f4f; --accent-soft:#e8f1eb; --warn:#8a6d1f; --danger:#9c2f2f;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16171a; --panel:#1e2023; --ink:#eceae6; --muted:#9b9a95;
+    --line:#32343a; --accent:#6fbf94; --accent-soft:#223029; --warn:#d6b45c; --danger:#e0806f; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:3rem 1.5rem 5rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1.5rem}
+h1{font-size:2.1rem;margin:0 0 .4rem;letter-spacing:-.025em}
+.lede{font-size:1.05rem;color:var(--muted);margin:0;max-width:66ch}
+h2{font-size:1.2rem;margin:2.5rem 0 .35rem;letter-spacing:-.015em}
+.stage{display:flex;align-items:baseline;gap:.6rem;margin-top:2.5rem}
+.stage .n{width:1.7rem;height:1.7rem;border-radius:50%;background:var(--accent);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;flex:none}
+.stage h2{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+.badge{display:inline-block;padding:.15rem .6rem;border-radius:999px;
+  background:var(--accent-soft);font-size:12.5px}
+.badge.mono{font-family:var(--mono)}
+.badge.warn{background:none;border:1px solid var(--warn);color:var(--warn)}
+.badge.ok{background:var(--accent-soft)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.1rem;margin:.9rem 0}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:1rem;align-items:start}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+.scroll{overflow-x:auto;max-height:26rem;overflow-y:auto}
+.thread{display:flex;flex-direction:column;gap:.85rem}
+.turn{display:flex;flex-direction:column;gap:.3rem}
+.bubble{max-width:88%;padding:.55rem .8rem;border-radius:14px;font-size:14px;line-height:1.45}
+.bubble.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bubble.assistant{align-self:flex-start;background:var(--bg);border:1px solid var(--line);
+  border-bottom-left-radius:4px;cursor:pointer;display:flex;flex-direction:column;gap:.2rem;
+  text-align:left;font:inherit;width:auto}
+.bubble.assistant:hover,.bubble.assistant[aria-current="true"]{border-color:var(--accent)}
+.bubble.assistant.unknown{border-style:dashed}
+.intent{font-weight:650}
+.meta{display:flex;align-items:center;gap:.35rem;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.dot.high{background:var(--accent)} .dot.medium{background:var(--warn)} .dot.low{background:var(--danger)}
+.bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin:.35rem 0 .1rem}
+.bar span{display:block;height:100%}
+.bar.high span{background:var(--accent)} .bar.medium span{background:var(--warn)} .bar.low span{background:var(--danger)}
+.conf{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.conf.high{color:var(--accent)} .conf.medium{color:var(--warn)} .conf.low{color:var(--danger)}
+h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  margin:1.1rem 0 .4rem;font-weight:600}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.7rem;
+  overflow-x:auto;font-family:var(--mono);font-size:12px;margin:.3rem 0}
+.mono{font-family:var(--mono);font-size:13px}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:.6rem .9rem;border-radius:0 8px 8px 0;font-size:13.5px;margin:.6rem 0 0}
+details{border-bottom:1px solid var(--line);padding:.4rem 0}
+details:last-child{border-bottom:none}
+summary{cursor:pointer;display:flex;gap:.6rem;align-items:baseline}
+ul.examples{margin:.5rem 0 .2rem;padding-left:1.2rem;font-size:13.5px;color:var(--muted)}
+ul.examples li{margin:.15rem 0}
+footer{margin-top:3rem;color:var(--muted);font-size:.85rem;
+  border-top:1px solid var(--line);padding-top:1.25rem}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>A hiring platform, configured and classified</h1>
+  <p class="lede">
+    One real run against a live service: a domain created from a one-line brief, an applicant
+    tracking system's tools registered over MCP, 18 intents with
+    152 examples indexed, then a conversation classified against them.
+    Every number here came out of the run.
+  </p>
+  <div class="chips">
+    <span class="badge">18 intents</span>
+    <span class="badge">152 examples</span>
+    <span class="badge">18 MCP tools</span>
+    <span class="badge">9 turns</span>
+    <span class="badge mono">BAAI/bge-small-en-v1.5</span>
+    <span class="badge">provider: mock</span>
+  </div>
+  <p class="muted small">
+    Recorded with the offline provider, so it is deterministic and makes no external calls.
+    The data is in Chroma and can be browsed in the running service.
+    <a href="architecture.html">Architecture</a> &middot;
+    <a href="properties.html">Configuration</a> &middot;
+    <a href="changelog.html">Changelog</a>
+  </p>
+</header>
+
+<div class="stage"><span class="n">1</span><h2>The domain</h2></div>
+<p class="muted">An administrator supplies a name and a sentence. The role and vocabulary the
+extractor works from are drafted from those and saved.</p>
+<div class="card">
+  <p class="mono">hiring</p>
+  <p class="muted small">an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline</p>
+  <h3>System instructions, drafted</h3>
+  <p class="small">You are acting as an HR and people-operations assistant. This is the hiring domain, which covers an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. Interpret every request in that role and use only the terminology the request itself contains. Never infer a value that is not stated; when an entity is not mentioned, leave it out rather than guessing.</p>
+  <h3>User instructions, drafted</h3>
+  <p class="small">Users are HR staff and employees asking about themselves or colleagues, working with an applicant tracking system: open requisitions, search and shortlist candidates, schedule interviews, collect scorecards, make offers and report on the pipeline. They phrase requests informally, name things by their common business terms, and often refer back to items from earlier in the conversation.</p>
+  <p class="note">Both are ordinary configuration: editable on the domain page, and layered onto
+  every extraction prompt in this domain.</p>
+</div>
+
+<div class="stage"><span class="n">2</span><h2>The tools it can reach</h2></div>
+<p class="muted">Imported from the ATS server's <span class="mono">tools/list</span> response at
+<span class="mono">https://ats.internal/mcp</span>. Each tool's own schema is
+what extracted entities are later matched against.</p>
+<div class="card scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>What it does</th><th>Arguments</th><th>Required</th></tr></thead>
+    <tbody><tr>
+          <td class="mono small">mcp__ats__search_candidates</td>
+          <td class="muted small">Find candidates by skill, location, seniority or stage</td>
+          <td class="mono small">skill, location, seniority, stage</td>
+          <td class="mono small">—</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_candidate</td>
+          <td class="muted small">Fetch one candidate&#x27;s full profile</td>
+          <td class="mono small">candidate_id</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__compare_candidates</td>
+          <td class="muted small">Put two candidates side by side</td>
+          <td class="mono small">candidate_id, other_candidate_id</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__shortlist_candidate</td>
+          <td class="muted small">Add a candidate to a requisition&#x27;s shortlist</td>
+          <td class="mono small">candidate_id, job_id</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__reject_candidate</td>
+          <td class="muted small">Reject a candidate with a reason</td>
+          <td class="mono small">candidate_id, reason</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__create_requisition</td>
+          <td class="muted small">Open a new requisition</td>
+          <td class="mono small">title, location, seniority, headcount</td>
+          <td class="mono small">title</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__search_requisitions</td>
+          <td class="muted small">Find requisitions by status, team or location</td>
+          <td class="mono small">status, team, location</td>
+          <td class="mono small">—</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_requisition_status</td>
+          <td class="muted small">Pipeline status for one requisition</td>
+          <td class="mono small">job_id</td>
+          <td class="mono small">job_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__close_requisition</td>
+          <td class="muted small">Close a requisition</td>
+          <td class="mono small">job_id, reason</td>
+          <td class="mono small">job_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__schedule_interview</td>
+          <td class="muted small">Book an interview</td>
+          <td class="mono small">candidate_id, interviewer, round, interview_date</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__reschedule_interview</td>
+          <td class="muted small">Move an existing interview</td>
+          <td class="mono small">candidate_id, interview_date</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_interview_feedback</td>
+          <td class="muted small">Read interview scorecards</td>
+          <td class="mono small">candidate_id, round</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__create_offer</td>
+          <td class="muted small">Raise an offer for a candidate</td>
+          <td class="mono small">candidate_id, job_id, salary</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_offer_status</td>
+          <td class="muted small">Where an offer has reached</td>
+          <td class="mono small">candidate_id</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__advance_application</td>
+          <td class="muted small">Move an application to the next stage</td>
+          <td class="mono small">candidate_id, stage</td>
+          <td class="mono small">candidate_id</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_pipeline_report</td>
+          <td class="muted small">Funnel counts and conversion for a requisition or team</td>
+          <td class="mono small">job_id, team, period</td>
+          <td class="mono small">—</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__submit_referral</td>
+          <td class="muted small">Refer someone for a role</td>
+          <td class="mono small">candidate_name, job_id</td>
+          <td class="mono small">candidate_name</td>
+        </tr><tr>
+          <td class="mono small">mcp__ats__get_sourcing_analytics</td>
+          <td class="muted small">Where candidates are coming from</td>
+          <td class="mono small">source, period</td>
+          <td class="mono small">—</td>
+        </tr></tbody>
+  </table>
+</div>
+
+<div class="stage"><span class="n">3</span><h2>The intents</h2></div>
+<p class="muted">18 operations a hiring team actually asks for, each wired to
+the tool that serves it. Several are deliberately close in wording, because a real applicant
+tracking system looks like that.</p>
+<div class="card scroll">
+  <table>
+    <thead><tr><th>Intent</th><th>MCP tool</th><th>Accepts</th><th class="num">Examples</th></tr></thead>
+    <tbody><tr>
+          <td><span class="mono">CANDIDATE_SEARCH</span><div class="muted small">Find candidates matching skills, location, seniority or pipeline stage.</div></td>
+          <td class="mono small">mcp__ats__search_candidates</td>
+          <td class="mono small">skill, location, seniority, stage</td>
+          <td class="num">9</td>
+        </tr><tr>
+          <td><span class="mono">CANDIDATE_PROFILE</span><div class="muted small">Open one candidate&#x27;s full profile.</div></td>
+          <td class="mono small">mcp__ats__get_candidate</td>
+          <td class="mono small">candidate_id</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">CANDIDATE_COMPARE</span><div class="muted small">Put two candidates side by side.</div></td>
+          <td class="mono small">mcp__ats__compare_candidates</td>
+          <td class="mono small">candidate_id, other_candidate_id</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">CANDIDATE_SHORTLIST</span><div class="muted small">Add a candidate to a requisition&#x27;s shortlist.</div></td>
+          <td class="mono small">mcp__ats__shortlist_candidate</td>
+          <td class="mono small">candidate_id, job_id</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">CANDIDATE_REJECT</span><div class="muted small">Reject a candidate, with a reason.</div></td>
+          <td class="mono small">mcp__ats__reject_candidate</td>
+          <td class="mono small">candidate_id, reason</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">JOB_CREATE</span><div class="muted small">Open a new requisition.</div></td>
+          <td class="mono small">mcp__ats__create_requisition</td>
+          <td class="mono small">title, location, seniority, headcount</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">JOB_SEARCH</span><div class="muted small">Find requisitions by status, team or location.</div></td>
+          <td class="mono small">mcp__ats__search_requisitions</td>
+          <td class="mono small">status, team, location</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">JOB_STATUS</span><div class="muted small">Pipeline status for one requisition.</div></td>
+          <td class="mono small">mcp__ats__get_requisition_status</td>
+          <td class="mono small">job_id</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">JOB_CLOSE</span><div class="muted small">Close a requisition.</div></td>
+          <td class="mono small">mcp__ats__close_requisition</td>
+          <td class="mono small">job_id, reason</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">INTERVIEW_SCHEDULE</span><div class="muted small">Book an interview for a candidate.</div></td>
+          <td class="mono small">mcp__ats__schedule_interview</td>
+          <td class="mono small">candidate_id, interviewer, round, interview_date</td>
+          <td class="num">10</td>
+        </tr><tr>
+          <td><span class="mono">INTERVIEW_RESCHEDULE</span><div class="muted small">Move an interview that is already booked.</div></td>
+          <td class="mono small">mcp__ats__reschedule_interview</td>
+          <td class="mono small">candidate_id, interview_date</td>
+          <td class="num">9</td>
+        </tr><tr>
+          <td><span class="mono">INTERVIEW_FEEDBACK</span><div class="muted small">Read the scorecards from a candidate&#x27;s interviews.</div></td>
+          <td class="mono small">mcp__ats__get_interview_feedback</td>
+          <td class="mono small">candidate_id, round</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">OFFER_CREATE</span><div class="muted small">Raise an offer for a candidate.</div></td>
+          <td class="mono small">mcp__ats__create_offer</td>
+          <td class="mono small">candidate_id, job_id, salary</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">OFFER_STATUS</span><div class="muted small">Where a candidate&#x27;s offer has reached.</div></td>
+          <td class="mono small">mcp__ats__get_offer_status</td>
+          <td class="mono small">candidate_id</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">APPLICATION_ADVANCE</span><div class="muted small">Move an application to the next stage of the pipeline.</div></td>
+          <td class="mono small">mcp__ats__advance_application</td>
+          <td class="mono small">candidate_id, stage</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">PIPELINE_REPORT</span><div class="muted small">Funnel counts and conversion for a requisition, team or period.</div></td>
+          <td class="mono small">mcp__ats__get_pipeline_report</td>
+          <td class="mono small">job_id, team, period</td>
+          <td class="num">8</td>
+        </tr><tr>
+          <td><span class="mono">REFERRAL_SUBMIT</span><div class="muted small">Refer someone for an open role.</div></td>
+          <td class="mono small">mcp__ats__submit_referral</td>
+          <td class="mono small">candidate_name, job_id</td>
+          <td class="num">12</td>
+        </tr><tr>
+          <td><span class="mono">SOURCING_ANALYTICS</span><div class="muted small">Where candidates are coming from, and which sources convert.</div></td>
+          <td class="mono small">mcp__ats__get_sourcing_analytics</td>
+          <td class="mono small">source, period</td>
+          <td class="num">8</td>
+        </tr></tbody>
+  </table>
+</div>
+
+<div class="stage"><span class="n">4</span><h2>The training signal</h2></div>
+<p class="muted">152 example utterances. This is the whole of it: no model was
+fine-tuned, and adding an intent means adding examples.</p>
+<div class="card scroll"><details><summary><span class="mono">CANDIDATE_SEARCH</span>
+        <span class="muted small">9 examples</span></summary>
+        <ul class="examples"><li>find senior backend engineers in Bangalore</li><li>show me candidates who know Kubernetes</li><li>search for staff engineers in Berlin</li><li>which candidates are at the screening stage</li><li>list frontend candidates in Dublin</li><li>any principal engineers in the pipeline</li><li>pull up candidates with Golang experience</li><li>look for junior data scientists in Pune</li><li>who have we got for machine learning roles</li></ul></details><details><summary><span class="mono">CANDIDATE_PROFILE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>open candidate C-2201</li><li>show me the profile for C-3310</li><li>pull up candidate C-2201&#x27;s details</li><li>I want to see C-4102&#x27;s resume</li><li>view the full profile of candidate C-5567</li><li>what does candidate C-2201 look like</li><li>display candidate C-3310</li><li>get me the record for C-7781</li></ul></details><details><summary><span class="mono">CANDIDATE_COMPARE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>compare candidate C-2201 with C-3310</li><li>put C-4102 and C-5567 side by side</li><li>how do C-2201 and C-3310 differ</li><li>which is stronger, C-4102 or C-7781</li><li>diff these two candidates</li><li>show me C-2201 against C-5567</li><li>contrast candidate C-3310 with C-4102</li><li>weigh up C-7781 versus C-2201</li></ul></details><details><summary><span class="mono">CANDIDATE_SHORTLIST</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>shortlist candidate C-2201 for J-4471</li><li>add C-3310 to the shortlist</li><li>put candidate C-4102 forward for the staff role</li><li>move C-5567 onto the shortlist for J-4471</li><li>I want to shortlist C-7781</li><li>mark candidate C-2201 as shortlisted</li><li>add this candidate to J-4471&#x27;s shortlist</li><li>please shortlist C-3310 for the backend req</li></ul></details><details><summary><span class="mono">CANDIDATE_REJECT</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>reject candidate C-2201</li><li>turn down C-3310, not enough depth</li><li>we are passing on candidate C-4102</li><li>decline C-5567 for this role</li><li>mark C-7781 as rejected</li><li>send a rejection to candidate C-2201</li><li>no further action on C-3310</li><li>close out candidate C-4102 as unsuccessful</li></ul></details><details><summary><span class="mono">JOB_CREATE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>open a new requisition for a senior backend engineer</li><li>create a job opening in Bangalore</li><li>raise a req for two platform engineers</li><li>I need to open a staff engineer role in Berlin</li><li>start a new requisition for a data scientist</li><li>set up a job posting for a junior designer</li><li>create a requisition for 3 support engineers</li><li>open a role for a principal architect in Dublin</li></ul></details><details><summary><span class="mono">JOB_SEARCH</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>which requisitions are open right now</li><li>list the roles we are hiring for in Bangalore</li><li>show me all open reqs on the Platform team</li><li>what jobs are on hold</li><li>find requisitions for the Payments team</li><li>show me closed requisitions</li><li>which openings does Infrastructure have</li><li>list every filled requisition this quarter</li></ul></details><details><summary><span class="mono">JOB_STATUS</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>what is the status of requisition J-4471</li><li>how is J-6620 doing</li><li>where has req J-4471 got to</li><li>give me the state of J-8890</li><li>is J-6620 still open</li><li>status check on requisition J-4471</li><li>how many people are in the pipeline for J-8890</li><li>tell me where J-6620 stands</li></ul></details><details><summary><span class="mono">JOB_CLOSE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>close requisition J-4471</li><li>we can shut down J-6620</li><li>cancel the req J-8890</li><li>mark J-4471 as closed, budget pulled</li><li>stop hiring for J-6620</li><li>close out requisition J-8890</li><li>put J-4471 to bed, role is filled</li><li>withdraw requisition J-6620</li></ul></details><details><summary><span class="mono">INTERVIEW_SCHEDULE</span>
+        <span class="muted small">10 examples</span></summary>
+        <ul class="examples"><li>schedule a new interview for candidate C-2201</li><li>book a first system design round for C-3310</li><li>set up an interview with C-4102 on March 3, 2026</li><li>arrange a screening call for candidate C-5567</li><li>put C-7781 in for a technical round</li><li>book the final round for C-2201</li><li>schedule C-3310 with the hiring manager next Tuesday</li><li>get a new interview in the diary for C-4102</li><li>line up an interview for candidate C-7781</li><li>set a date for C-2201&#x27;s design round</li></ul></details><details><summary><span class="mono">INTERVIEW_RESCHEDULE</span>
+        <span class="muted small">9 examples</span></summary>
+        <ul class="examples"><li>reschedule the interview we already booked for C-2201</li><li>move C-3310&#x27;s existing interview to March 10, 2026</li><li>push back the round already in the diary for C-4102</li><li>shift C-5567&#x27;s booked slot to next week</li><li>we need to rearrange the interview C-7781 already has</li><li>the time no longer works, move C-2201&#x27;s interview</li><li>postpone the interview that is booked with C-3310</li><li>bring C-4102&#x27;s already-scheduled interview forward</li><li>C-5567 cannot make the booked slot, find another</li></ul></details><details><summary><span class="mono">INTERVIEW_FEEDBACK</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>what did the interviewers say about C-2201</li><li>show me the scorecards for candidate C-3310</li><li>pull the feedback for C-4102&#x27;s design round</li><li>how did C-5567 do in the interview</li><li>read me the interview notes on C-7781</li><li>what was the verdict on candidate C-2201</li><li>get the panel feedback for C-3310</li><li>were the reviews positive for C-4102</li></ul></details><details><summary><span class="mono">OFFER_CREATE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>raise an offer for candidate C-2201</li><li>make an offer to C-3310 for J-4471</li><li>let us offer C-4102 the staff role</li><li>prepare an offer letter for candidate C-5567</li><li>extend an offer to C-7781</li><li>put together an offer for C-2201 at 4200000</li><li>we want to offer candidate C-3310</li><li>start the offer process for C-4102</li></ul></details><details><summary><span class="mono">OFFER_STATUS</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>has candidate C-2201 accepted yet</li><li>what is the offer status for C-3310</li><li>did C-4102 sign</li><li>where is the offer for candidate C-5567</li><li>is C-7781&#x27;s offer still pending approval</li><li>check the offer state for C-2201</li><li>have we heard back from C-3310 on the offer</li><li>track the offer for candidate C-4102</li></ul></details><details><summary><span class="mono">APPLICATION_ADVANCE</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>move candidate C-2201 to the interview stage</li><li>advance C-3310 to OFFER</li><li>progress candidate C-4102 to screening</li><li>push C-5567 through to the next round</li><li>take C-7781 forward to interview</li><li>promote candidate C-2201 to the offer stage</li><li>move C-3310 along the pipeline</li><li>mark C-4102 as hired</li></ul></details><details><summary><span class="mono">PIPELINE_REPORT</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>how is the hiring funnel looking this quarter</li><li>give me a pipeline report for J-4471</li><li>what is our conversion from screening to offer</li><li>show funnel numbers for the Platform team</li><li>how many candidates dropped off at interview</li><li>pipeline breakdown for the Payments team</li><li>report on our hiring throughput this month</li><li>where are we losing candidates</li></ul></details><details><summary><span class="mono">REFERRAL_SUBMIT</span>
+        <span class="muted small">12 examples</span></summary>
+        <ul class="examples"><li>I want to refer Priya Raman for J-4471</li><li>submit a referral for Daniel Okafor</li><li>refer my former colleague Mei Lin</li><li>put forward Anita Desai as a referral</li><li>I am referring Tomas Novak for the platform role</li><li>add a referral for Sarah Whitfield</li><li>recommend Rahul Menon for J-6620</li><li>refer Kofi Mensah for an engineering opening</li><li>a friend of mine would be good for this, her name is Leila Haddad</li><li>referring someone I used to work with, Jonas Berg</li><li>I would like to refer a former teammate for an open role</li><li>please log a referral, the person is Ana Ruiz</li></ul></details><details><summary><span class="mono">SOURCING_ANALYTICS</span>
+        <span class="muted small">8 examples</span></summary>
+        <ul class="examples"><li>which sourcing channel gives us the best candidates</li><li>how many hires came from referrals this year</li><li>break down applications by source</li><li>is LinkedIn worth the spend</li><li>compare agency hires against inbound</li><li>what share of candidates come from job boards</li><li>sourcing effectiveness for this quarter</li><li>which channels convert to offers</li></ul></details></div>
+<div class="card">
+  <div class="chips">
+    <span class="badge ok">index ready</span>
+    <span class="badge">v36</span>
+    <span class="badge">152 BM25 documents</span>
+    <span class="badge">152 vectors</span>
+    <span class="badge ok">
+      in step</span>
+  </div>
+  <p class="muted small">Both indexes are built as the examples land and must agree.</p>
+</div>
+
+<div class="stage"><span class="n">5</span><h2>The conversation</h2></div>
+<p class="muted">Nine turns in one session. Click any reply to see how that turn was decided.</p>
+<div class="grid">
+  <section class="card" id="detail"></section>
+  <section class="card"><div class="thread" id="thread"></div></section>
+</div>
+
+<div class="stage"><span class="n">6</span><h2>What Chroma kept</h2></div>
+<p class="muted">Read back from the store, not recomputed. Opening this session in the playground
+shows exactly this.</p>
+<div class="card">
+  <div class="chips">
+    <span class="badge mono">hiring-demo</span>
+    <span class="badge">last intent: UNKNOWN</span>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Request</th><th>Intent</th><th class="num">Conf</th><th>Entities</th></tr></thead>
+    <tbody><tr><td class="num">1</td><td>find senior backend engineers in Bangalore</td>
+        <td class="mono small">CANDIDATE_SEARCH</td><td class="num">0.75</td>
+        <td class="mono small">{&quot;skill&quot;: &quot;Bangalore&quot;, &quot;seniority&quot;: &quot;SENIOR&quot;}</td></tr><tr><td class="num">2</td><td>open candidate C-2201</td>
+        <td class="mono small">CANDIDATE_PROFILE</td><td class="num">0.77</td>
+        <td class="mono small">{&quot;candidate_id&quot;: &quot;C-2201&quot;}</td></tr><tr><td class="num">3</td><td>compare them with C-3310</td>
+        <td class="mono small">CANDIDATE_COMPARE</td><td class="num">0.87</td>
+        <td class="mono small">{&quot;candidate_id&quot;: &quot;C-3310&quot;, &quot;other_candidate_id&quot;: &quot;C-3310&quot;}</td></tr><tr><td class="num">4</td><td>book C-2201 in for a technical round on March 3, 2026</td>
+        <td class="mono small">INTERVIEW_SCHEDULE</td><td class="num">0.87</td>
+        <td class="mono small">{&quot;candidate_id&quot;: &quot;C-2201&quot;, &quot;interview_date&quot;: &quot;2026-03-03&quot;}</td></tr><tr><td class="num">5</td><td>what did the interviewers say</td>
+        <td class="mono small">INTERVIEW_FEEDBACK</td><td class="num">0.76</td>
+        <td class="mono small">{&quot;candidate_id&quot;: &quot;C-2201&quot;}</td></tr><tr><td class="num">6</td><td>raise an offer for C-2201</td>
+        <td class="mono small">OFFER_CREATE</td><td class="num">0.84</td>
+        <td class="mono small">{&quot;candidate_id&quot;: &quot;C-2201&quot;, &quot;job_id&quot;: &quot;C-2201&quot;}</td></tr><tr><td class="num">7</td><td>how is the hiring funnel looking this quarter</td>
+        <td class="mono small">PIPELINE_REPORT</td><td class="num">0.79</td>
+        <td class="mono small">{&quot;job_id&quot;: &quot;C-2201&quot;}</td></tr><tr><td class="num">8</td><td>I&#x27;d like to put forward a former colleague, Priya Raman, for the platform role</td>
+        <td class="mono small">REFERRAL_SUBMIT</td><td class="num">0.73</td>
+        <td class="mono small">{&quot;job_id&quot;: &quot;C-2201&quot;}</td></tr><tr><td class="num">9</td><td>what is the weather today</td>
+        <td class="mono small">UNKNOWN</td><td class="num">0.36</td>
+        <td class="mono small">—</td></tr></tbody>
+  </table>
+  <h3>Entities still in play</h3>
+  <pre>{
+  &quot;skill&quot;: &quot;Bangalore&quot;,
+  &quot;seniority&quot;: &quot;SENIOR&quot;,
+  &quot;candidate_id&quot;: &quot;C-2201&quot;,
+  &quot;other_candidate_id&quot;: &quot;C-3310&quot;,
+  &quot;interview_date&quot;: &quot;2026-03-03&quot;,
+  &quot;job_id&quot;: &quot;C-2201&quot;
+}</pre>
+</div>
+
+<footer>
+  Tool calls are resolved and reported, never executed: the MCP block shows exactly what the
+  caller would invoke. The catalogue and the conversation are in Chroma under the
+  <span class="mono">hiring</span> domain.
+</footer>
+</div>
+
+<script>
+const TURNS = [{"query": "find senior backend engineers in Bangalore", "note": "A plain search. Skill, location and seniority are extracted and mapped onto the ATS tool.", "intent": "CANDIDATE_SEARCH", "confidence": 0.7478, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 14.365, "entities": {"skill": "Bangalore", "seniority": "SENIOR"}, "tool": {"name": "search_candidates", "version": "v1", "arguments": {"skill": "Bangalore", "seniority": "SENIOR"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "677dc890a97e44d69976f1dc4935387f", "server": "ats", "tool": "search_candidates", "qualified_name": "mcp__ats__search_candidates", "description": "Find candidates by skill, location, seniority or stage", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"skill": "Bangalore", "seniority": "SENIOR"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "677dc890a97e44d69976f1dc4935387f", "server": "ats", "tool": "search_candidates", "qualified_name": "mcp__ats__search_candidates", "description": "Find candidates by skill, location, seniority or stage", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"skill": "Bangalore", "seniority": "SENIOR"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 1, "previous_turns": 0, "previous_intent": null, "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.9746, "s_margin": 0.0164, "s_support": 1.0, "confidence": 0.7478, "agg_top": 0.094333, "agg_second": 0.092783, "best_similarity": 1.0}, "top_intents": [{"intent": "CANDIDATE_SEARCH", "intent_id": "deb8233009c1490a8ff9fc921cd2af60", "score": 0.094333, "supporting_examples": 4, "best_similarity": 1.0}, {"intent": "JOB_CREATE", "intent_id": "227b5ff0dd84452e85aa53c92c306d39", "score": 0.092783, "supporting_examples": 5, "best_similarity": 0.783778}, {"intent": "JOB_SEARCH", "intent_id": "07f856edf18f4db3944f5db145a27729", "score": 0.045702, "supporting_examples": 2, "best_similarity": 0.72554}, {"intent": "CANDIDATE_SHORTLIST", "intent_id": "1e978eda9a044159a513f3c75a6ff38b", "score": 0.014706, "supporting_examples": 1, "best_similarity": 0.0}], "dense_hits": [{"text": "find senior backend engineers in Bangalore", "intent": "CANDIDATE_SEARCH", "score": 1.0}, {"text": "open a new requisition for a senior backend engineer", "intent": "JOB_CREATE", "score": 0.783778}, {"text": "create a job opening in Bangalore", "intent": "JOB_CREATE", "score": 0.733809}, {"text": "list the roles we are hiring for in Bangalore", "intent": "JOB_SEARCH", "score": 0.72554}], "bm25_hits": [{"text": "find senior backend engineers in Bangalore", "intent": "CANDIDATE_SEARCH", "score": 22.54847}, {"text": "open a new requisition for a senior backend engineer", "intent": "JOB_CREATE", "score": 7.037232}, {"text": "create a job opening in Bangalore", "intent": "JOB_CREATE", "score": 6.483193}, {"text": "search for staff engineers in Berlin", "intent": "CANDIDATE_SEARCH", "score": 5.981198}]}, {"query": "open candidate C-2201", "note": "A different intent entirely, distinguished from the search by wording, not by keywords.", "intent": "CANDIDATE_PROFILE", "confidence": 0.7689, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 13.519, "entities": {"candidate_id": "C-2201"}, "tool": {"name": "get_candidate", "version": "v1", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1", "server": "ats", "tool": "get_candidate", "qualified_name": "mcp__ats__get_candidate", "description": "Fetch one candidate's full profile", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "b891c2d5a6154ac8a9f1a3094edf3ee1", "server": "ats", "tool": "get_candidate", "qualified_name": "mcp__ats__get_candidate", "description": "Fetch one candidate's full profile", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 2, "previous_turns": 1, "previous_intent": "CANDIDATE_SEARCH", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.8259, "s_margin": 0.2496, "s_support": 1.0, "confidence": 0.7689, "agg_top": 0.07994, "agg_second": 0.059988, "best_similarity": 1.0}, "top_intents": [{"intent": "CANDIDATE_PROFILE", "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d", "score": 0.07994, "supporting_examples": 3, "best_similarity": 1.0}, {"intent": "CANDIDATE_SHORTLIST", "intent_id": "1e978eda9a044159a513f3c75a6ff38b", "score": 0.059988, "supporting_examples": 2, "best_similarity": 0.846718}, {"intent": "CANDIDATE_COMPARE", "intent_id": "956df946a017465aa7bb3b3a06266c24", "score": 0.031498, "supporting_examples": 1, "best_similarity": 0.870089}, {"intent": "CANDIDATE_REJECT", "intent_id": "1f6c8d1f42f4448691b4717f28092912", "score": 0.030835, "supporting_examples": 2, "best_similarity": 0.0}], "dense_hits": [{"text": "open candidate C-2201", "intent": "CANDIDATE_PROFILE", "score": 1.0}, {"text": "what does candidate C-2201 look like", "intent": "CANDIDATE_PROFILE", "score": 0.88908}, {"text": "pull up candidate C-2201's details", "intent": "CANDIDATE_PROFILE", "score": 0.87868}, {"text": "compare candidate C-2201 with C-3310", "intent": "CANDIDATE_COMPARE", "score": 0.870089}], "bm25_hits": [{"text": "open candidate C-2201", "intent": "CANDIDATE_PROFILE", "score": 8.873161}, {"text": "reject candidate C-2201", "intent": "CANDIDATE_REJECT", "score": 5.338142}, {"text": "compare candidate C-2201 with C-3310", "intent": "CANDIDATE_COMPARE", "score": 4.765251}, {"text": "mark candidate C-2201 as shortlisted", "intent": "CANDIDATE_SHORTLIST", "score": 4.614255}]}, {"query": "compare them with C-3310", "note": "A follow-up: 'them' points back, so it is read against the previous turn.", "intent": "CANDIDATE_COMPARE", "confidence": 0.8714, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 14.943, "entities": {"candidate_id": "C-3310", "other_candidate_id": "C-3310"}, "tool": {"name": "compare_candidates", "version": "v1", "arguments": {"candidate_id": "C-3310", "other_candidate_id": "C-3310"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "47055d5f35624167af1a83a0b7fe87ce", "server": "ats", "tool": "compare_candidates", "qualified_name": "mcp__ats__compare_candidates", "description": "Put two candidates side by side", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-3310", "other_candidate_id": "C-3310"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "47055d5f35624167af1a83a0b7fe87ce", "server": "ats", "tool": "compare_candidates", "qualified_name": "mcp__ats__compare_candidates", "description": "Put two candidates side by side", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-3310", "other_candidate_id": "C-3310"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 3, "previous_turns": 2, "previous_intent": "CANDIDATE_PROFILE", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.9733, "s_margin": 0.5123, "s_support": 1.0, "confidence": 0.8714, "agg_top": 0.094211, "agg_second": 0.04595, "best_similarity": 0.90244}, "top_intents": [{"intent": "CANDIDATE_COMPARE", "intent_id": "956df946a017465aa7bb3b3a06266c24", "score": 0.094211, "supporting_examples": 3, "best_similarity": 0.90244}, {"intent": "CANDIDATE_PROFILE", "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d", "score": 0.04595, "supporting_examples": 2, "best_similarity": 0.840506}, {"intent": "INTERVIEW_FEEDBACK", "intent_id": "9261cae33ba1495ea12ac250dc6772e3", "score": 0.030835, "supporting_examples": 2, "best_similarity": 0.843625}, {"intent": "INTERVIEW_SCHEDULE", "intent_id": "3d6472e11663459dbcee6fdcec799f92", "score": 0.030579, "supporting_examples": 2, "best_similarity": 0.0}], "dense_hits": [{"text": "compare candidate C-2201 with C-3310", "intent": "CANDIDATE_COMPARE", "score": 0.90244}, {"text": "show me the scorecards for candidate C-3310", "intent": "INTERVIEW_FEEDBACK", "score": 0.843625}, {"text": "show me the profile for C-3310", "intent": "CANDIDATE_PROFILE", "score": 0.840506}, {"text": "how do C-2201 and C-3310 differ", "intent": "CANDIDATE_COMPARE", "score": 0.834935}], "bm25_hits": [{"text": "compare candidate C-2201 with C-3310", "intent": "CANDIDATE_COMPARE", "score": 10.508561}, {"text": "contrast candidate C-3310 with C-4102", "intent": "CANDIDATE_COMPARE", "score": 6.369805}, {"text": "schedule C-3310 with the hiring manager next Tuesday", "intent": "INTERVIEW_SCHEDULE", "score": 5.25806}, {"text": "postpone the interview that is booked with C-3310", "intent": "INTERVIEW_RESCHEDULE", "score": 5.25806}]}, {"query": "book C-2201 in for a technical round on March 3, 2026", "note": "An action rather than a lookup, and close in wording to rescheduling. The date is normalised to ISO 8601.", "intent": "INTERVIEW_SCHEDULE", "confidence": 0.8686, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 15.15, "entities": {"candidate_id": "C-2201", "interview_date": "2026-03-03"}, "tool": {"name": "schedule_interview", "version": "v1", "arguments": {"candidate_id": "C-2201", "interview_date": "2026-03-03"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "3225cc9294c649cda845e22154d36b99", "server": "ats", "tool": "schedule_interview", "qualified_name": "mcp__ats__schedule_interview", "description": "Book an interview", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201", "interview_date": "2026-03-03"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "3225cc9294c649cda845e22154d36b99", "server": "ats", "tool": "schedule_interview", "qualified_name": "mcp__ats__schedule_interview", "description": "Book an interview", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201", "interview_date": "2026-03-03"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 4, "previous_turns": 3, "previous_intent": "CANDIDATE_COMPARE", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 0.8623, "s_rrf": 0.987, "s_margin": 0.6802, "s_support": 1.0, "confidence": 0.8686, "agg_top": 0.095534, "agg_second": 0.03055, "best_similarity": 0.844913}, "top_intents": [{"intent": "INTERVIEW_SCHEDULE", "intent_id": "3d6472e11663459dbcee6fdcec799f92", "score": 0.095534, "supporting_examples": 6, "best_similarity": 0.844913}, {"intent": "OFFER_STATUS", "intent_id": "09aa68cf833146a09627fb873b9e1945", "score": 0.03055, "supporting_examples": 2, "best_similarity": 0.752006}, {"intent": "INTERVIEW_RESCHEDULE", "intent_id": "987d0bb7a95f4611bc4b207388d33d54", "score": 0.03009, "supporting_examples": 2, "best_similarity": 0.0}, {"intent": "CANDIDATE_PROFILE", "intent_id": "0acec6b53e7b454d8dca18cb2d0d250d", "score": 0.015152, "supporting_examples": 1, "best_similarity": 0.736828}], "dense_hits": [{"text": "book the final round for C-2201", "intent": "INTERVIEW_SCHEDULE", "score": 0.844913}, {"text": "put C-7781 in for a technical round", "intent": "INTERVIEW_SCHEDULE", "score": 0.790951}, {"text": "set a date for C-2201's design round", "intent": "INTERVIEW_SCHEDULE", "score": 0.790764}, {"text": "check the offer state for C-2201", "intent": "OFFER_STATUS", "score": 0.752006}], "bm25_hits": [{"text": "set up an interview with C-4102 on March 3, 2026", "intent": "INTERVIEW_SCHEDULE", "score": 12.836067}, {"text": "put C-7781 in for a technical round", "intent": "INTERVIEW_SCHEDULE", "score": 12.530616}, {"text": "book the final round for C-2201", "intent": "INTERVIEW_SCHEDULE", "score": 10.577929}, {"text": "book a first system design round for C-3310", "intent": "INTERVIEW_SCHEDULE", "score": 9.338367}]}, {"query": "what did the interviewers say", "note": "Referential again. The candidate carries forward from earlier in the conversation.", "intent": "INTERVIEW_FEEDBACK", "confidence": 0.7591, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 15.375, "entities": {"candidate_id": "C-2201"}, "tool": {"name": "get_interview_feedback", "version": "v1", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "822d05e5ef924df699d7b6ba89b93699", "server": "ats", "tool": "get_interview_feedback", "qualified_name": "mcp__ats__get_interview_feedback", "description": "Read interview scorecards", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "822d05e5ef924df699d7b6ba89b93699", "server": "ats", "tool": "get_interview_feedback", "qualified_name": "mcp__ats__get_interview_feedback", "description": "Read interview scorecards", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 5, "previous_turns": 4, "previous_intent": "INTERVIEW_SCHEDULE", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": ["candidate_id"]}, "breakdown": {"s_dense": 0.7132, "s_rrf": 0.8282, "s_margin": 0.6098, "s_support": 1.0, "confidence": 0.7591, "agg_top": 0.080158, "agg_second": 0.031281, "best_similarity": 0.785298}, "top_intents": [{"intent": "INTERVIEW_FEEDBACK", "intent_id": "9261cae33ba1495ea12ac250dc6772e3", "score": 0.080158, "supporting_examples": 4, "best_similarity": 0.785298}, {"intent": "OFFER_STATUS", "intent_id": "09aa68cf833146a09627fb873b9e1945", "score": 0.031281, "supporting_examples": 2, "best_similarity": 0.0}, {"intent": "PIPELINE_REPORT", "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec", "score": 0.030622, "supporting_examples": 2, "best_similarity": 0.760029}, {"intent": "INTERVIEW_SCHEDULE", "intent_id": "3d6472e11663459dbcee6fdcec799f92", "score": 0.029877, "supporting_examples": 2, "best_similarity": 0.715255}], "dense_hits": [{"text": "what did the interviewers say about C-2201", "intent": "INTERVIEW_FEEDBACK", "score": 0.785298}, {"text": "how many candidates dropped off at interview", "intent": "PIPELINE_REPORT", "score": 0.760029}, {"text": "read me the interview notes on C-7781", "intent": "INTERVIEW_FEEDBACK", "score": 0.7572}, {"text": "how did C-5567 do in the interview", "intent": "INTERVIEW_FEEDBACK", "score": 0.734792}], "bm25_hits": [{"text": "what did the interviewers say about C-2201", "intent": "INTERVIEW_FEEDBACK", "score": 15.667034}, {"text": "did C-4102 sign", "intent": "OFFER_STATUS", "score": 4.684555}, {"text": "how did C-5567 do in the interview", "intent": "INTERVIEW_FEEDBACK", "score": 4.210122}, {"text": "what is the status of requisition J-4471", "intent": "JOB_STATUS", "score": 3.335125}]}, {"query": "raise an offer for C-2201", "note": "Late-pipeline intent, close in wording to several others and still separated.", "intent": "OFFER_CREATE", "confidence": 0.8429, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 14.63, "entities": {"candidate_id": "C-2201", "job_id": "C-2201"}, "tool": {"name": "create_offer", "version": "v1", "arguments": {"candidate_id": "C-2201", "job_id": "C-2201"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "222cb85a450e455389a11c559c1a35f9", "server": "ats", "tool": "create_offer", "qualified_name": "mcp__ats__create_offer", "description": "Raise an offer for a candidate", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201", "job_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "222cb85a450e455389a11c559c1a35f9", "server": "ats", "tool": "create_offer", "qualified_name": "mcp__ats__create_offer", "description": "Raise an offer for a candidate", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"candidate_id": "C-2201", "job_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 6, "previous_turns": 5, "previous_intent": "INTERVIEW_FEEDBACK", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.995, "s_margin": 0.3768, "s_support": 1.0, "confidence": 0.8429, "agg_top": 0.096303, "agg_second": 0.060016, "best_similarity": 0.946985}, "top_intents": [{"intent": "OFFER_CREATE", "intent_id": "e888b2fedb944e75baede642d252824a", "score": 0.096303, "supporting_examples": 6, "best_similarity": 0.946985}, {"intent": "OFFER_STATUS", "intent_id": "09aa68cf833146a09627fb873b9e1945", "score": 0.060016, "supporting_examples": 3, "best_similarity": 0.902418}, {"intent": "APPLICATION_ADVANCE", "intent_id": "a5e2c5c04ae94cf799ee63a578940656", "score": 0.030331, "supporting_examples": 1, "best_similarity": 0.886958}, {"intent": "JOB_CREATE", "intent_id": "227b5ff0dd84452e85aa53c92c306d39", "score": 0.014925, "supporting_examples": 1, "best_similarity": 0.0}], "dense_hits": [{"text": "raise an offer for candidate C-2201", "intent": "OFFER_CREATE", "score": 0.946985}, {"text": "put together an offer for C-2201 at 4200000", "intent": "OFFER_CREATE", "score": 0.924695}, {"text": "check the offer state for C-2201", "intent": "OFFER_STATUS", "score": 0.902418}, {"text": "promote candidate C-2201 to the offer stage", "intent": "APPLICATION_ADVANCE", "score": 0.886958}], "bm25_hits": [{"text": "raise an offer for candidate C-2201", "intent": "OFFER_CREATE", "score": 12.392482}, {"text": "put together an offer for C-2201 at 4200000", "intent": "OFFER_CREATE", "score": 7.323653}, {"text": "extend an offer to C-7781", "intent": "OFFER_CREATE", "score": 6.25252}, {"text": "prepare an offer letter for candidate C-5567", "intent": "OFFER_CREATE", "score": 6.041024}]}, {"query": "how is the hiring funnel looking this quarter", "note": "Analytics, with no candidate involved. A different shape of question in the same domain.", "intent": "PIPELINE_REPORT", "confidence": 0.7895, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 15.21, "entities": {"job_id": "C-2201"}, "tool": {"name": "get_pipeline_report", "version": "v1", "arguments": {"job_id": "C-2201"}, "missing_required": [], "ready": true, "mcp": {"tool_id": "c8db9c8b345a41c297c629116fac1715", "server": "ats", "tool": "get_pipeline_report", "qualified_name": "mcp__ats__get_pipeline_report", "description": "Funnel counts and conversion for a requisition or team", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"job_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}}, "mcp": {"tool_id": "c8db9c8b345a41c297c629116fac1715", "server": "ats", "tool": "get_pipeline_report", "qualified_name": "mcp__ats__get_pipeline_report", "description": "Funnel counts and conversion for a requisition or team", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"job_id": "C-2201"}, "missing_required": [], "unmapped": [], "ready": true, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 7, "previous_turns": 5, "previous_intent": "OFFER_CREATE", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": ["job_id"]}, "breakdown": {"s_dense": 1.0, "s_rrf": 0.9749, "s_margin": 0.1831, "s_support": 1.0, "confidence": 0.7895, "agg_top": 0.094362, "agg_second": 0.07708, "best_similarity": 0.999998}, "top_intents": [{"intent": "PIPELINE_REPORT", "intent_id": "66f9a71f76f7475c9639b6b65e58d1ec", "score": 0.094362, "supporting_examples": 4, "best_similarity": 0.999998}, {"intent": "SOURCING_ANALYTICS", "intent_id": "08fc5dfb04ce4882bbdac4d6fddf44ef", "score": 0.07708, "supporting_examples": 3, "best_similarity": 0.815442}, {"intent": "JOB_SEARCH", "intent_id": "07f856edf18f4db3944f5db145a27729", "score": 0.060276, "supporting_examples": 3, "best_similarity": 0.759874}, {"intent": "JOB_STATUS", "intent_id": "ce23ef92ef4b46679998a5671e344205", "score": 0.015385, "supporting_examples": 1, "best_similarity": 0.0}], "dense_hits": [{"text": "how is the hiring funnel looking this quarter", "intent": "PIPELINE_REPORT", "score": 0.999998}, {"text": "sourcing effectiveness for this quarter", "intent": "SOURCING_ANALYTICS", "score": 0.815442}, {"text": "report on our hiring throughput this month", "intent": "PIPELINE_REPORT", "score": 0.780101}, {"text": "list every filled requisition this quarter", "intent": "JOB_SEARCH", "score": 0.759874}], "bm25_hits": [{"text": "how is the hiring funnel looking this quarter", "intent": "PIPELINE_REPORT", "score": 23.258746}, {"text": "sourcing effectiveness for this quarter", "intent": "SOURCING_ANALYTICS", "score": 7.621723}, {"text": "list every filled requisition this quarter", "intent": "JOB_SEARCH", "score": 7.104945}, {"text": "report on our hiring throughput this month", "intent": "PIPELINE_REPORT", "score": 6.183676}]}, {"query": "I'd like to put forward a former colleague, Priya Raman, for the platform role", "note": "A person's name rather than an id, phrased unlike any stored example. This is retrieval generalising rather than matching a string.", "intent": "REFERRAL_SUBMIT", "confidence": 0.7349, "reason": null, "strategy": "hybrid_rrf", "latency_ms": 16.229, "entities": {"job_id": "C-2201"}, "tool": {"name": "submit_referral", "version": "v1", "arguments": {"job_id": "C-2201"}, "missing_required": ["candidate_name"], "ready": false, "mcp": {"tool_id": "cde725d5910945f89d703de63ef07abf", "server": "ats", "tool": "submit_referral", "qualified_name": "mcp__ats__submit_referral", "description": "Refer someone for a role", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"job_id": "C-2201"}, "missing_required": ["candidate_name"], "unmapped": [], "ready": false, "unresolved": null}}, "mcp": {"tool_id": "cde725d5910945f89d703de63ef07abf", "server": "ats", "tool": "submit_referral", "qualified_name": "mcp__ats__submit_referral", "description": "Refer someone for a role", "transport": "http", "endpoint": "https://ats.internal/mcp", "arguments": {"job_id": "C-2201"}, "missing_required": ["candidate_name"], "unmapped": [], "ready": false, "unresolved": null}, "context": {"session_id": "hiring-demo", "turn": 8, "previous_turns": 5, "previous_intent": "PIPELINE_REPORT", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": ["job_id"]}, "breakdown": {"s_dense": 0.5719, "s_rrf": 0.9949, "s_margin": 0.5441, "s_support": 1.0, "confidence": 0.7349, "agg_top": 0.096295, "agg_second": 0.043905, "best_similarity": 0.728747}, "top_intents": [{"intent": "REFERRAL_SUBMIT", "intent_id": "7dd949c5dc3741d1a23ac3c25e6ecb25", "score": 0.096295, "supporting_examples": 5, "best_similarity": 0.728747}, {"intent": "JOB_CREATE", "intent_id": "227b5ff0dd84452e85aa53c92c306d39", "score": 0.043905, "supporting_examples": 4, "best_similarity": 0.667278}, {"intent": "CANDIDATE_SHORTLIST", "intent_id": "1e978eda9a044159a513f3c75a6ff38b", "score": 0.031025, "supporting_examples": 1, "best_similarity": 0.685062}, {"intent": "JOB_CLOSE", "intent_id": "9f2a04c23c0948eca9ac5c8d2eb0cb24", "score": 0.015152, "supporting_examples": 1, "best_similarity": 0.0}], "dense_hits": [{"text": "I want to refer Priya Raman for J-4471", "intent": "REFERRAL_SUBMIT", "score": 0.728747}, {"text": "refer my former colleague Mei Lin", "intent": "REFERRAL_SUBMIT", "score": 0.711073}, {"text": "I am referring Tomas Novak for the platform role", "intent": "REFERRAL_SUBMIT", "score": 0.706743}, {"text": "I would like to refer a former teammate for an open role", "intent": "REFERRAL_SUBMIT", "score": 0.703109}], "bm25_hits": [{"text": "I would like to refer a former teammate for an open role", "intent": "REFERRAL_SUBMIT", "score": 11.468252}, {"text": "I want to refer Priya Raman for J-4471", "intent": "REFERRAL_SUBMIT", "score": 10.219625}, {"text": "put candidate C-4102 forward for the staff role", "intent": "CANDIDATE_SHORTLIST", "score": 9.577707}, {"text": "refer my former colleague Mei Lin", "intent": "REFERRAL_SUBMIT", "score": 9.396827}]}, {"query": "what is the weather today", "note": "Out of scope. It must come back UNKNOWN rather than being absorbed by the conversation.", "intent": "UNKNOWN", "confidence": 0.3584, "reason": "low_similarity", "strategy": "hybrid_rrf", "latency_ms": 10.051, "entities": {}, "tool": null, "mcp": {}, "context": {"session_id": "hiring-demo", "turn": 9, "previous_turns": 5, "previous_intent": "REFERRAL_SUBMIT", "used_for_retrieval": false, "retrieval_text": null, "carried_entities": []}, "breakdown": {"s_dense": 0.2425, "s_rrf": 0.4826, "s_margin": 0.0117, "s_support": 1.0, "confidence": 0.3584, "agg_top": 0.046708, "agg_second": 0.046161, "best_similarity": 0.597005}, "top_intents": [{"intent": "INTERVIEW_SCHEDULE", "intent_id": "3d6472e11663459dbcee6fdcec799f92", "score": 0.046708, "supporting_examples": 3, "best_similarity": 0.597005}, {"intent": "INTERVIEW_RESCHEDULE", "intent_id": "987d0bb7a95f4611bc4b207388d33d54", "score": 0.046161, "supporting_examples": 3, "best_similarity": 0.581824}, {"intent": "JOB_SEARCH", "intent_id": "07f856edf18f4db3944f5db145a27729", "score": 0.031319, "supporting_examples": 2, "best_similarity": 0.619716}, {"intent": "JOB_STATUS", "intent_id": "ce23ef92ef4b46679998a5671e344205", "score": 0.031319, "supporting_examples": 2, "best_similarity": 0.571021}], "dense_hits": [{"text": "which requisitions are open right now", "intent": "JOB_SEARCH", "score": 0.619716}, {"text": "schedule C-3310 with the hiring manager next Tuesday", "intent": "INTERVIEW_SCHEDULE", "score": 0.597005}, {"text": "put C-7781 in for a technical round", "intent": "INTERVIEW_SCHEDULE", "score": 0.586831}, {"text": "shift C-5567's booked slot to next week", "intent": "INTERVIEW_RESCHEDULE", "score": 0.581824}], "bm25_hits": [{"text": "what is the status of requisition J-4471", "intent": "JOB_STATUS", "score": 5.47838}, {"text": "what is the offer status for C-3310", "intent": "OFFER_STATUS", "score": 5.47838}, {"text": "what is our conversion from screening to offer", "intent": "PIPELINE_REPORT", "score": 4.834016}, {"text": "is LinkedIn worth the spend", "intent": "SOURCING_ANALYTICS", "score": 3.395891}]}];
+const pct = v => Math.round(v * 100) + "%";
+const band = v => v >= 0.8 ? "high" : (v >= 0.5 ? "medium" : "low");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]);
+
+function hits(list) {
+  if (!list || !list.length) return '<p class="muted small">None.</p>';
+  return '<table><tbody>' + list.map(h =>
+    `<tr><td>${esc(h.text)}</td><td class="mono small">${esc(h.intent)}</td>` +
+    `<td class="num">${h.score.toFixed(3)}</td></tr>`).join('') + '</tbody></table>';
+}
+
+function detail(i) {
+  const t = TURNS[i], b = band(t.confidence), mcp = t.mcp || {};
+  let out = `<h2>${esc(t.intent)}</h2>
+    <div class="conf ${b}">${pct(t.confidence)}</div>
+    <div class="bar ${b}"><span style="width:${pct(t.confidence)}"></span></div>
+    <p class="muted small">${esc(t.query)}</p>
+    <div class="chips"><span class="badge">${esc(t.strategy||'')}</span>
+      <span class="badge">${(t.latency_ms||0).toFixed(1)} ms</span>
+      ${t.reason ? `<span class="badge warn">${esc(t.reason)}</span>` : ''}</div>
+    <p class="note">${esc(t.note)}</p>`;
+
+  out += '<h3>Entities</h3>';
+  const keys = Object.keys(t.entities || {});
+  out += keys.length
+    ? '<table><tbody>' + keys.map(k =>
+        `<tr><td class="mono small">${esc(k)}</td><td>${esc(t.entities[k])}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted small">None extracted.</p>';
+
+  out += '<h3>MCP call</h3>';
+  out += (mcp.qualified_name && !mcp.unresolved)
+    ? `<div class="chips"><span class="badge mono">${esc(mcp.qualified_name)}</span>` +
+      (mcp.ready ? '<span class="badge ok">ready</span>' : '<span class="badge warn">not ready</span>') +
+      `</div><pre>${esc(JSON.stringify({server: mcp.server, tool: mcp.tool, arguments: mcp.arguments}, null, 2))}</pre>` +
+      (mcp.missing_required && mcp.missing_required.length
+        ? `<p class="small">missing: <span class="mono">${esc(mcp.missing_required.join(', '))}</span></p>` : '') +
+      '<p class="muted small">Reported, never called.</p>'
+    : '<p class="muted small">No MCP tool for this intent.</p>';
+
+  if (t.context && (t.context.used_for_retrieval || (t.context.carried_entities||[]).length)) {
+    out += '<h3>Conversation</h3>';
+    if (t.context.used_for_retrieval)
+      out += `<p class="small">Read against the previous turn: <span class="mono">${esc(t.context.retrieval_text)}</span></p>`;
+    if ((t.context.carried_entities||[]).length)
+      out += `<p class="small">Carried forward: <span class="mono">${esc(t.context.carried_entities.join(', '))}</span></p>`;
+  }
+
+  if (t.breakdown) {
+    const bd = t.breakdown;
+    out += '<h3>Confidence breakdown</h3><table><tbody>' +
+      [["s_dense",bd.s_dense],["s_rrf",bd.s_rrf],["s_margin",bd.s_margin],
+       ["s_support",bd.s_support],["best similarity",bd.best_similarity]].map(([n,v]) =>
+      `<tr><td><span class="dot ${band(v)}"></span> ${n}</td><td class="num">${v.toFixed(3)}</td></tr>`
+    ).join('') + '</tbody></table>';
+  }
+  if ((t.top_intents||[]).length) {
+    out += '<h3>Ranked intents after fusion</h3><table><tbody>' + t.top_intents.map((x,n) =>
+      `<tr><td>${n+1}</td><td><span class="dot ${band(x.best_similarity)}"></span> ${esc(x.intent)}</td>` +
+      `<td class="num">${x.score.toFixed(5)}</td><td class="num">${x.best_similarity.toFixed(3)}</td></tr>`
+    ).join('') + '</tbody></table>';
+  }
+  out += '<h3>Dense retrieval</h3>' + hits(t.dense_hits);
+  out += '<h3>BM25 retrieval</h3>' + hits(t.bm25_hits);
+  document.getElementById('detail').innerHTML = out;
+  document.querySelectorAll('.bubble.assistant').forEach((el, n) =>
+    el.setAttribute('aria-current', n === i ? 'true' : 'false'));
+}
+
+document.getElementById('thread').innerHTML = TURNS.map((t, i) => {
+  const b = band(t.confidence), unknown = t.intent === 'UNKNOWN';
+  const ents = Object.keys(t.entities||{}).length
+    ? `<span class="muted small mono">${esc(JSON.stringify(t.entities))}</span>` : '';
+  return `<div class="turn">
+    <div class="bubble user">${esc(t.query)}</div>
+    <button class="bubble assistant ${unknown ? 'unknown' : ''}" onclick="detail(${i})">
+      <span class="intent">${unknown ? 'No matching intent' : esc(t.intent)}</span>
+      ${ents}
+      <span class="meta"><span class="dot ${b}"></span>${pct(t.confidence)}
+      ${t.tool && t.tool.name ? '· <span class="mono">'+esc(t.tool.name)+'</span>' : ''}</span>
+    </button>
+  </div>`;
+}).join('');
+detail(0);
+</script>
+</body>
+</html>
