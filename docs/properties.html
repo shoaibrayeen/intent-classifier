@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration · Intent Classifier</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#faf9f7; --panel:#fff; --ink:#1a1917; --muted:#6b6a66; --line:#e3e1dc;
+  --accent:#2f6f4f; --accent-soft:#e8f1eb; --warn:#8a6d1f;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16171a; --panel:#1e2023; --ink:#eceae6; --muted:#9b9a95;
+    --line:#32343a; --accent:#6fbf94; --accent-soft:#223029; --warn:#d6b45c; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:3rem 1.5rem 5rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1rem}
+h1{font-size:2rem;margin:0 0 .4rem;letter-spacing:-.025em}
+.lede{font-size:1.05rem;color:var(--muted);margin:0;max-width:64ch}
+h2{font-size:1.15rem;margin:2.5rem 0 .5rem;padding-top:1.25rem;
+  border-top:1px solid var(--line);letter-spacing:-.015em}
+section:first-of-type h2{border-top:none;padding-top:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:.55rem .65rem;border-bottom:1px solid var(--line);
+  vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  font-weight:600}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--accent-soft)}
+.mono{font-family:var(--mono);font-size:13px}
+.default{white-space:nowrap;color:var(--accent)}
+.type{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.muted{color:var(--muted)}
+.tag{display:inline-block;margin-top:.25rem;padding:.1rem .45rem;border-radius:999px;
+  border:1px solid var(--warn);color:var(--warn);font-size:11px;font-family:inherit;
+  white-space:normal}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:.85rem 1.1rem;border-radius:0 8px 8px 0;margin:1.5rem 0}
+.note strong{display:block;margin-bottom:.25rem}
+.note ul{margin:.5rem 0 0;padding-left:1.1rem}
+.note li{margin:.25rem 0}
+.toc{font-size:13.5px;color:var(--muted);margin:.75rem 0 0;line-height:2}
+.toc a{color:var(--accent);text-decoration:none}
+.scroll{overflow-x:auto}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:.9rem 1rem;overflow-x:auto;font-family:var(--mono);font-size:13px}
+footer{margin-top:3rem;border-top:1px solid var(--line);padding-top:1.25rem;
+  color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Configuration</h1>
+  <p class="lede">
+    Every setting the service reads, with the value it uses when you say nothing.
+    All 48 have working defaults: the service starts, classifies and serves its UI with no
+    <span class="mono">.env</span> at all.
+  </p>
+  <p class="toc"><a href="#core">Core</a> · <a href="#entity-extraction-and-generation">Entity extraction and generation</a> · <a href="#security">Security</a> · <a href="#storage">Storage</a> · <a href="#embedding-model">Embedding model</a> · <a href="#retrieval">Retrieval</a> · <a href="#confidence-and-unknown">Confidence and UNKNOWN</a> · <a href="#retrieval-strategy">Retrieval strategy</a> · <a href="#multi-turn-sessions">Multi-turn sessions</a> · <a href="#observability">Observability</a></p>
+</header>
+
+<div class="note">
+  <strong>Nothing is required to start.</strong>
+  Two values become mandatory once you turn on the feature that needs them:
+  <ul><li><span class="mono">API_KEYS</span> — AUTH_ENABLED is true</li><li><span class="mono">OPENAI_API_KEY</span> — LLM_PROVIDER resolves to openai</li></ul>
+  Set a variable in <span class="mono">.env</span> only to move it off the default below.
+</div>
+
+<p>Settings come from the environment, or from <span class="mono">.env</span> beside the
+application. Environment variables win. Names are case-insensitive:</p>
+
+<pre>CONFIDENCE_THRESHOLD=0.65
+LLM_PROVIDER=mock</pre>
+
+<section>
+  <h2 id="core">Core</h2>
+  <p class="muted">Nothing here needs setting to run the service.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">APP_NAME</td>
+        <td class="mono default">intent-classifier</td>
+        <td class="type">str</td>
+        <td>Service name, used in logs and traces.</td>
+      </tr>
+      <tr>
+        <td class="mono">APP_VERSION</td>
+        <td class="mono default">0.1.0</td>
+        <td class="type">str</td>
+        <td>Reported by /api/v1/health.</td>
+      </tr>
+      <tr>
+        <td class="mono">LOG_LEVEL</td>
+        <td class="mono default">INFO</td>
+        <td class="type">str</td>
+        <td>Python logging level: DEBUG, INFO, WARNING, ERROR.</td>
+      </tr>
+      <tr>
+        <td class="mono">SEED_ON_STARTUP</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Load the demo catalogue when the store is empty. Seeding runs in the server&#x27;s own process because embedded Chroma is single-writer. docker-compose turns this on.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="entity-extraction-and-generation">Entity extraction and generation</h2>
+  <p class="muted">Classification never calls a language model. These control the parts that do: entity extraction, and drafting domain instructions and intents.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">ENTITY_EXTRACTION_ENABLED</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Extract entities after a confident match. Off by default: it adds a network call.</td>
+      </tr>
+      <tr>
+        <td class="mono">LLM_MAX_RETRIES</td>
+        <td class="mono default">1</td>
+        <td class="type">int<div class="muted">≥ 0, ≤ 5</div></td>
+        <td>Retries on a failed provider call.</td>
+      </tr>
+      <tr>
+        <td class="mono">LLM_PROVIDER</td>
+        <td class="mono default">auto</td>
+        <td class="type">&quot;auto&quot; | &quot;openai&quot; | &quot;mock&quot; | &quot;none&quot;</td>
+        <td>auto uses OpenAI when a key is set. mock is an offline rule-based provider needing no key. none disables generation entirely.</td>
+      </tr>
+      <tr>
+        <td class="mono">LLM_TIMEOUT_SECONDS</td>
+        <td class="mono default">10.0</td>
+        <td class="type">float<div class="muted">&gt; 0</div></td>
+        <td>How long a provider call may take before giving up.</td>
+      </tr>
+      <tr>
+        <td class="mono">OPENAI_API_KEY<div class="tag">required when LLM_PROVIDER resolves to openai</div></td>
+        <td class="mono default">(empty)</td>
+        <td class="type">str</td>
+        <td>OpenAI API key. Classification never needs one; extraction and generation do.</td>
+      </tr>
+      <tr>
+        <td class="mono">OPENAI_BASE_URL</td>
+        <td class="mono default">https://api.openai.com/v1</td>
+        <td class="type">str</td>
+        <td>Override to point at a compatible endpoint.</td>
+      </tr>
+      <tr>
+        <td class="mono">OPENAI_MODEL</td>
+        <td class="mono default">gpt-4o-mini</td>
+        <td class="type">str</td>
+        <td>Model used for extraction and drafting.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="security">Security</h2>
+  <p class="muted">Off by default so the service runs out of the box. Turn it on before exposing it.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">API_KEYS<div class="tag">required when AUTH_ENABLED is true</div></td>
+        <td class="mono default">(empty)</td>
+        <td class="type">str</td>
+        <td>Comma-separated &quot;secret:domains:scopes&quot; entries. &quot;*&quot; means all. Scopes nest: admin &gt; write &gt; read &gt; classify.</td>
+      </tr>
+      <tr>
+        <td class="mono">AUTH_ENABLED</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Require an API key on every request except /health.</td>
+      </tr>
+      <tr>
+        <td class="mono">UI_AUTH_EXEMPT</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Let the HTML UI through without a key, for use behind an authenticating proxy.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="storage">Storage</h2>
+  
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">CHROMA_MODE</td>
+        <td class="mono default">persistent</td>
+        <td class="type">&quot;persistent&quot; | &quot;ephemeral&quot;</td>
+        <td>persistent keeps the catalogue on disk; ephemeral is in-memory, used by the tests.</td>
+      </tr>
+      <tr>
+        <td class="mono">CHROMA_PATH</td>
+        <td class="mono default">./data/chroma</td>
+        <td class="type">str</td>
+        <td>Where the embedded Chroma store lives.</td>
+      </tr>
+      <tr>
+        <td class="mono">INDEX_DIR</td>
+        <td class="mono default">./data/indexes</td>
+        <td class="type">str</td>
+        <td>Reserved for persisted BM25 artefacts. Indexes are rebuilt from Chroma today.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="embedding-model">Embedding model</h2>
+  
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">MODEL_CACHE_DIR</td>
+        <td class="mono default">./data/models</td>
+        <td class="type">str</td>
+        <td>Where the model is cached. The default OS temp directory is purged, so this is set.</td>
+      </tr>
+      <tr>
+        <td class="mono">MODEL_NAME</td>
+        <td class="mono default">BAAI/bge-small-en-v1.5</td>
+        <td class="type">str</td>
+        <td>FastEmbed model. Changing it invalidates existing vectors: reindex every domain after.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="retrieval">Retrieval</h2>
+  
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">AGG_TOP_N</td>
+        <td class="mono default">3</td>
+        <td class="type">int<div class="muted">≥ 1, ≤ 20</div></td>
+        <td>How many of an intent&#x27;s best examples are summed into its score.</td>
+      </tr>
+      <tr>
+        <td class="mono">RETRIEVAL_TOP_K</td>
+        <td class="mono default">10</td>
+        <td class="type">int<div class="muted">≥ 1, ≤ 100</div></td>
+        <td>Examples each retriever returns before fusion.</td>
+      </tr>
+      <tr>
+        <td class="mono">RRF_K</td>
+        <td class="mono default">60</td>
+        <td class="type">int<div class="muted">≥ 1</div></td>
+        <td>Reciprocal Rank Fusion constant. Smaller sharpens the top ranks.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="confidence-and-unknown">Confidence and UNKNOWN</h2>
+  <p class="muted">The thresholds that decide whether to answer at all. Calibrate them against your own evaluation set rather than by feel.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">CONFIDENCE_THRESHOLD</td>
+        <td class="mono default">0.55</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 1.0</div></td>
+        <td>Below this a result is UNKNOWN. Raise it to refuse more, lower it to guess more.</td>
+      </tr>
+      <tr>
+        <td class="mono">DENSE_SIM_CEIL</td>
+        <td class="mono default">0.9</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 1.0</div></td>
+        <td>Similarity that maps to a dense score of 1.</td>
+      </tr>
+      <tr>
+        <td class="mono">DENSE_SIM_FLOOR</td>
+        <td class="mono default">0.5</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 1.0</div></td>
+        <td>Similarity that maps to a dense score of 0.</td>
+      </tr>
+      <tr>
+        <td class="mono">MIN_DENSE_SIMILARITY</td>
+        <td class="mono default">0.6</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 1.0</div></td>
+        <td>Hard floor on best cosine similarity. This is what rejects off-domain queries.</td>
+      </tr>
+      <tr>
+        <td class="mono">W_DENSE</td>
+        <td class="mono default">0.35</td>
+        <td class="type">float</td>
+        <td>Weight of the dense signal in confidence.</td>
+      </tr>
+      <tr>
+        <td class="mono">W_MARGIN</td>
+        <td class="mono default">0.25</td>
+        <td class="type">float</td>
+        <td>Weight of the lead over the runner-up intent.</td>
+      </tr>
+      <tr>
+        <td class="mono">W_RRF</td>
+        <td class="mono default">0.25</td>
+        <td class="type">float</td>
+        <td>Weight of the fusion signal in confidence.</td>
+      </tr>
+      <tr>
+        <td class="mono">W_SUPPORT</td>
+        <td class="mono default">0.15</td>
+        <td class="type">float</td>
+        <td>Weight of how many examples back the top intent.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="retrieval-strategy">Retrieval strategy</h2>
+  <p class="muted">Changing retrieval is the riskiest change here, because a regression is invisible until the wrong tool gets called.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">AB_TESTING_ENABLED</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Assign a strategy per request by hashing the request id, so it stays reproducible.</td>
+      </tr>
+      <tr>
+        <td class="mono">AB_VARIANTS</td>
+        <td class="mono default">hybrid_rrf,dense_only</td>
+        <td class="type">str</td>
+        <td>Comma-separated strategies to assign between.</td>
+      </tr>
+      <tr>
+        <td class="mono">AUTO_RESCUE_MARGIN</td>
+        <td class="mono default">0.1</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 0.5</div></td>
+        <td>How far above the threshold an auto fallback must score. Without it, auto trades UNKNOWN detection for accuracy.</td>
+      </tr>
+      <tr>
+        <td class="mono">DEFAULT_STRATEGY</td>
+        <td class="mono default">hybrid_rrf</td>
+        <td class="type">str</td>
+        <td>hybrid_rrf is the measured best. auto answers with hybrid and falls back only when hybrid cannot place a query, reporting which one resolved it.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="multi-turn-sessions">Multi-turn sessions</h2>
+  <p class="muted">Only active when a request carries a session id.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">CONTEXT_FOLLOWUP_MAX_WORDS</td>
+        <td class="mono default">3</td>
+        <td class="type">int<div class="muted">≥ 0, ≤ 20</div></td>
+        <td>A fragment this short counts as referential even without a pronoun.</td>
+      </tr>
+      <tr>
+        <td class="mono">CONTEXT_RESCUE_MARGIN</td>
+        <td class="mono default">0.1</td>
+        <td class="type">float<div class="muted">≥ 0.0, ≤ 0.5</div></td>
+        <td>How far above the threshold a contextual retry must score. The retry includes the previous question, which alone can carry the match, so a rescue has to prove itself.</td>
+      </tr>
+      <tr>
+        <td class="mono">CONTEXT_RETRIEVAL_ENABLED</td>
+        <td class="mono default">true</td>
+        <td class="type">bool</td>
+        <td>Retry an UNKNOWN follow-up with the previous question prepended.</td>
+      </tr>
+      <tr>
+        <td class="mono">ENTITY_CARRY_OVER_ENABLED</td>
+        <td class="mono default">true</td>
+        <td class="type">bool</td>
+        <td>Carry entities from earlier turns into a new intent that accepts them.</td>
+      </tr>
+      <tr>
+        <td class="mono">SESSION_HISTORY_TURNS</td>
+        <td class="mono default">5</td>
+        <td class="type">int<div class="muted">≥ 0, ≤ 50</div></td>
+        <td>Earlier turns shown to the extractor as history.</td>
+      </tr>
+      <tr>
+        <td class="mono">SESSION_MAX_TURNS</td>
+        <td class="mono default">50</td>
+        <td class="type">int<div class="muted">≥ 1, ≤ 1000</div></td>
+        <td>Turns kept per session; older ones are pruned on write.</td>
+      </tr>
+      <tr>
+        <td class="mono">SESSION_TTL_SECONDS</td>
+        <td class="mono default">604800</td>
+        <td class="type">int<div class="muted">≥ 60</div></td>
+        <td>Turns older than this are dropped.</td>
+      </tr>
+      <tr>
+        <td class="mono">SESSIONS_ENABLED</td>
+        <td class="mono default">true</td>
+        <td class="type">bool</td>
+        <td>Record conversation turns when a request carries a session id.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2 id="observability">Observability</h2>
+  <p class="muted">Metrics and the audit trail are on; tracing needs a collector, so it is not.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Default</th><th>Type</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">AUDIT_LOG_ENABLED</td>
+        <td class="mono default">true</td>
+        <td class="type">bool</td>
+        <td>Record an append-only trail of changes and classifications.</td>
+      </tr>
+      <tr>
+        <td class="mono">AUDIT_LOG_PATH</td>
+        <td class="mono default">./data/audit/audit.jsonl</td>
+        <td class="type">str</td>
+        <td>Where the audit trail is written.</td>
+      </tr>
+      <tr>
+        <td class="mono">AUDIT_LOG_QUERY_TEXT</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Record the raw query text. Off by default: user queries can carry personal data.</td>
+      </tr>
+      <tr>
+        <td class="mono">METRICS_ENABLED</td>
+        <td class="mono default">true</td>
+        <td class="type">bool</td>
+        <td>Serve Prometheus metrics.</td>
+      </tr>
+      <tr>
+        <td class="mono">OTLP_ENDPOINT</td>
+        <td class="mono default">http://localhost:4317</td>
+        <td class="type">str</td>
+        <td>Where traces are exported.</td>
+      </tr>
+      <tr>
+        <td class="mono">TRACING_ENABLED</td>
+        <td class="mono default">false</td>
+        <td class="type">bool</td>
+        <td>Export OpenTelemetry spans. Off by default: with no collector the exporter retries in the background and adds latency.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  Generated from <span class="mono">app/config.py</span> by
+  <span class="mono">scripts/build_properties.py</span>, so this page cannot drift from the code.
+  <a href="architecture.html">Architecture</a> ·
+  <a href="api-documentation.html">API reference</a> ·
+  <a href="changelog.html">Changelog</a> ·
+  <a href="demo.html">Demo</a>
+</footer>
+</div>
+</body>
+</html>

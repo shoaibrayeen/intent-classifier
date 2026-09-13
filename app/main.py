@@ -225,6 +225,15 @@ def create_app(
     )
 
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+    # The documents link to each other by filename, which is how they read from
+    # disk. Serving the directory under one prefix keeps those links working in
+    # the browser too: architecture.html from /ui/docs/changelog.html resolves
+    # to /ui/docs/architecture.html rather than a 404 beside the UI routes.
+    docs_dir = BASE_DIR.parent / "docs"
+    if docs_dir.is_dir():
+        app.mount("/ui/docs", StaticFiles(directory=docs_dir), name="docs")
+    else:
+        logger.warning("docs/ is missing; the reference pages will not be served")
     app.include_router(api_router)
     app.include_router(ui_router)
 

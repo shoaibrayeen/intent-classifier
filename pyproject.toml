@@ -57,3 +57,4 @@ ignore = ["B008"]
 # Documentation prose and HTML templates read worse when hard-wrapped.
 "scripts/build_api_docs.py" = ["E501"]
 "scripts/build_demo.py" = ["E501"]
+"scripts/build_properties.py" = ["E501"]

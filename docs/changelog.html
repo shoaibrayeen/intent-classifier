@@ -88,12 +88,40 @@
     Entries record the decision behind a change, not just its name. Where a number appears it was
     measured on the held-out evaluation set, not estimated.
     <a href="architecture.html">Architecture</a> &middot;
-    <a href="api-documentation.html">API reference</a>
+    <a href="api-documentation.html">API reference</a> &middot;
+    <a href="properties.html">Configuration</a>
   </p>
 </header>
 
 <h2 id="unreleased">Unreleased</h2>
 <p class="muted">Documentation layout, the changelog itself, and playground fixes.</p>
+
+<h3>Fixed: the reference pages linked to nowhere</h3>
+<p>
+  The documents link to each other by filename, which is how they read from disk. Served at
+  their own routes, <code>architecture.html</code> from <code>/ui/changelog</code> resolved to
+  <code>/ui/architecture.html</code> and 404ed; the architecture note had no route at all and was
+  unreachable from the UI. The whole directory is now served at <code>/ui/docs/</code>, so those
+  links resolve in the browser exactly as they do on disk, and the short paths redirect there.
+  A test crawls every link on every page and fails on a dead one.
+</p>
+
+<h3>Configuration documents itself</h3>
+<ul>
+  <li><strong><code>docs/properties.html</code></strong> lists all 48 settings with their
+  defaults, types and constraints, generated from <code>app/config.py</code> and served at
+  <code>/ui/properties</code>. Every field carries its own description and group, so a setting
+  added to the model appears in the page automatically; a table maintained by hand drifts the
+  first time someone forgets.</li>
+  <li><strong><code>.env</code> and <code>.env.example</code> were cut back to what is actually
+  configured.</strong> They had been repeating three dozen values that already matched their
+  defaults, which is noise that goes stale silently: change a default in code and the file
+  quietly keeps overriding it with the old one. A test now fails if either file sets a value to
+  its default.</li>
+  <li>Nothing is required to start. Two values become mandatory only with the feature that needs
+  them: <code>OPENAI_API_KEY</code> for the OpenAI provider, <code>API_KEYS</code> once
+  authentication is on.</li>
+</ul>
 
 <h3>The playground became a chat</h3>
 <ul>

@@ -424,11 +424,17 @@ Everything a reader opens lives in `docs/`, and the app serves it too.
 
 | File | Route | What it is |
 |---|---|---|
-| `docs/architecture.html` | — | the design, the pipeline, and the decisions behind it |
+| `docs/architecture.html` | `/ui/architecture` | the design, the pipeline, and the decisions behind it |
 | `docs/api-documentation.html` | `/ui/api` | the API reference, generated from the live schema |
+| `docs/properties.html` | `/ui/properties` | every setting, its default, and what it does |
+| `/ui/architecture` | the design note |
 | `docs/changelog.html` | `/ui/changelog`, `/changelog` | what changed and why |
-| `docs/demo.html` | — | a recorded conversation, interactive |
-| `docs/demo.gif` | — | the same run as an animation |
+| `docs/demo.html` | `/ui/demo` | a recorded conversation, interactive |
+| `docs/demo.gif` | `/ui/docs/demo.gif` | the same run as an animation |
+
+The whole directory is served at `/ui/docs/`, because the documents link to each
+other by filename. Serving them under one prefix keeps those links working in
+the browser exactly as they do on disk. The short paths above redirect there.
 | `README.md` | — | setup, configuration, and how to run it |
 
 `README.md` stays at the repository root rather than moving into `docs/`:
@@ -442,7 +448,15 @@ uv run python -m scripts.build_api_docs          # regenerate
 uv run python -m scripts.build_api_docs --check  # fail if stale
 ```
 
-A test runs that check, so the reference cannot drift from the code.
+The configuration reference is generated the same way, from the `Settings`
+model:
+
+```bash
+uv run python -m scripts.build_properties
+uv run python -m scripts.build_properties --check
+```
+
+Tests run both checks, so neither page can drift from the code.
 
 The demo is recorded the same way, against a running service:
 
@@ -465,12 +479,17 @@ Then open <http://localhost:8000/>. That is the whole quickstart: compose sets
 examples) loads on the first run, and only while the store is empty. Set it to
 `false` in `docker-compose.yml` for a real deployment.
 
-`.env` is optional and gitignored. Without one the defaults in `app/config.py`
-apply, which run everything except entity extraction. For that:
+`.env` is optional and gitignored. Without one the defaults apply, and they run
+everything except entity extraction. For that:
 
 ```bash
 cp .env.example .env     # then set OPENAI_API_KEY
 ```
+
+`.env.example` carries one line, because one line is all most deployments need.
+Every other setting has a working default: see
+[docs/properties.html](docs/properties.html) for the full list, or `/ui/properties`
+on a running service.
 
 **Do not run the seed script against a store a running server already holds:**
 
@@ -509,7 +528,7 @@ embedding model (~67 MB) into `./data/models`.
 |---|---|
 | `/` | domains with intent and example counts, create and delete |
 | `/ui/domains/{id}` | intents in a domain, tool mapping, index status, rebuild |
-| `/ui/domains/{id}/intents/{id}` | entity schema, training examples, add and delete |
+| `/ui/domains/{id}/intents/{id}` | entity schema, examples, MCP binding, generate more |
 | `/ui/playground` | a chat: ask on the right, see the reasoning on the left |
 | `/ui/intents` | every intent across every domain, and what it is wired to |
 | `/ui/mcp` | the MCP tool registry; `/ui/mcp/{id}` for one tool |
@@ -524,6 +543,8 @@ reaches a browser that already cached the old one.
 | `/ui/evaluation` | run the held-out evaluation set against the live catalogue |
 | `/ui/operations` | index health, configuration in force, recent activity |
 | `/ui/api` | the generated API reference |
+| `/ui/properties` | every setting, its default, and what it does |
+| `/ui/architecture` | the design note |
 
 The playground is the debugging tool: it shows the normalized query, the dense
 hits with cosine similarities, the BM25 hits with tokens and scores, the fused
@@ -650,42 +671,24 @@ uv run python -m scripts.seed --reset --import catalogue.json
 
 ## Configuration
 
-Every value has a working default in `.env`.
+Every setting has a working default. The service starts, classifies and serves
+its UI with **no `.env` at all**, so `.env` holds only what you want to differ
+from the default.
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `LLM_PROVIDER` | `auto` | `auto`, `openai`, `mock` (offline), `none` |
-| `OPENAI_API_KEY` | *(empty)* | only needed for entity extraction |
-| `SESSIONS_ENABLED` | `true` | multi-turn memory |
-| `SESSION_HISTORY_TURNS` | `5` | turns shown to the extractor |
-| `SESSION_MAX_TURNS` / `SESSION_TTL_SECONDS` | `50` / `604800` | per-session size and age limits |
-| `CONTEXT_RETRIEVAL_ENABLED` | `true` | retry an UNKNOWN follow-up with the previous question |
-| `CONTEXT_RESCUE_MARGIN` | `0.10` | how far above threshold a contextual retry must score |
-| `CONTEXT_FOLLOWUP_MAX_WORDS` | `3` | a fragment this short counts as referential |
-| `ENTITY_CARRY_OVER_ENABLED` | `true` | carry earlier entities into a new intent |
-| `LLM_TIMEOUT_SECONDS` | `10` | extraction gives up after this |
-| `AUTH_ENABLED` / `API_KEYS` | `false` / *(empty)* | API key authentication |
-| `AB_TESTING_ENABLED` / `AB_VARIANTS` | `false` / `hybrid_rrf,dense_only` | strategy assignment |
-| `DEFAULT_STRATEGY` | `hybrid_rrf` | retrieval strategy; `auto` picks per query |
-| `AUTO_RESCUE_MARGIN` | `0.10` | how far above threshold an `auto` fallback must score |
-| `METRICS_ENABLED` | `true` | serve `/api/v1/metrics` |
-| `AUDIT_LOG_ENABLED` / `AUDIT_LOG_PATH` | `true` / `./data/audit/audit.jsonl` | audit trail |
-| `AUDIT_LOG_QUERY_TEXT` | `false` | record raw query text (personal data) |
-| `TRACING_ENABLED` / `OTLP_ENDPOINT` | `false` / `localhost:4317` | OpenTelemetry |
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | override for a compatible endpoint |
-| `OPENAI_MODEL` | `gpt-4o-mini` | model used for extraction |
-| `ENTITY_EXTRACTION_ENABLED` | `false` | turn on the LLM extraction step |
-| `CHROMA_MODE` | `persistent` | `ephemeral` for tests |
-| `CHROMA_PATH` | `./data/chroma` | store location |
-| `MODEL_NAME` | `BAAI/bge-small-en-v1.5` | FastEmbed model |
-| `MODEL_CACHE_DIR` | `./data/models` | where the model is cached |
-| `RETRIEVAL_TOP_K` | `10` | examples fetched per retriever |
-| `RRF_K` | `60` | fusion constant |
-| `AGG_TOP_N` | `3` | examples summed per intent |
-| `CONFIDENCE_THRESHOLD` | `0.55` | below this, `UNKNOWN` |
-| `MIN_DENSE_SIMILARITY` | `0.60` | hard similarity floor |
-| `DENSE_SIM_FLOOR` / `DENSE_SIM_CEIL` | `0.50` / `0.90` | rescaling range for `s_dense` |
-| `LOG_LEVEL` | `INFO` | |
+Two values become mandatory once you enable the feature that needs them:
+
+| Variable | Required when |
+|---|---|
+| `OPENAI_API_KEY` | `LLM_PROVIDER` resolves to `openai` |
+| `API_KEYS` | `AUTH_ENABLED` is `true` |
+
+[docs/properties.html](docs/properties.html), served at `/ui/properties`, lists
+all 48 settings with their defaults, types and constraints. It is generated from
+`app/config.py`, so it cannot go stale.
+
+```bash
+cp .env.example .env    # then set OPENAI_API_KEY if you want extraction
+```
 
 ## Tests and evaluation
 
